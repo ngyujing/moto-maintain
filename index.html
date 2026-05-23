@@ -597,7 +597,7 @@ select.form-input option{background:var(--s3)}
   </div>
   <div class="nav-section">
     <div class="nav-label">Main</div>
-    <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">📊</span>Dashboard<span class="nav-badge">3</span></div>
+    <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">📊</span>Dashboard<span class="nav-badge" id="sidebar-badge" style="display:none">0</span></div>
     <div class="nav-item" onclick="nav('bikes',this)"><span class="nav-icon">🏍️</span>My Bikes</div>
     <div class="nav-item" onclick="nav('maintenance',this)"><span class="nav-icon">🔧</span>Maintenance</div>
     <div class="nav-item" onclick="nav('history',this)"><span class="nav-icon">📋</span>Service History</div>
@@ -609,10 +609,10 @@ select.form-input option{background:var(--s3)}
   </div>
   <div class="sidebar-footer">
     <div class="user-row">
-      <div class="avatar">AR</div>
+      <div class="avatar" id="sidebar-avatar">AR</div>
       <div>
-        <div class="user-name">Ahmad Razif</div>
-        <div class="user-role">🏍️ Rider</div>
+        <div class="user-name" id="sidebar-user-name">Ahmad Razif</div>
+        <div class="user-role" id="sidebar-user-role">🏍️ Rider</div>
       </div>
     </div>
   </div>
@@ -630,7 +630,7 @@ select.form-input option{background:var(--s3)}
     </div>
     <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
   </div>
-  <div class="stat-grid">
+  <div class="stat-grid" id="dash-stats-grid">
     <div class="stat-card" id="dash-overdue-card">
       <div class="stat-icon" style="background:var(--red-bg)">🔴</div>
       <div class="stat-label">Overdue</div>
@@ -656,7 +656,7 @@ select.form-input option{background:var(--s3)}
       <div class="stat-sub">Across all bikes</div>
     </div>
   </div>
-  <div class="grid2" style="margin-bottom:24px">
+  <div class="grid2" id="dash-charts-row" style="margin-bottom:24px">
     <div class="card" style="padding:20px">
       <div class="section-hd">Service Status by Bike</div>
       <div class="chart-wrap" id="chart-bars"></div>
@@ -878,12 +878,12 @@ select.form-input option{background:var(--s3)}
     <div class="settings-desc">Your profile details.</div>
     <div class="card" style="padding:20px">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" value="Ahmad Razif"/></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="ahmad@example.com"/></div>
-        <div class="form-group full"><label class="form-label">New Password</label><input class="form-input" type="password" placeholder="Leave blank to keep current"/></div>
+        <div class="form-group"><label class="form-label">Full Name</label><input id="profile-name" class="form-input" value="Ahmad Razif" oninput="previewNameChange(this.value)"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input id="profile-email" class="form-input" value="ahmad@example.com"/></div>
+        <div class="form-group full"><label class="form-label">New Password</label><input id="profile-pw" class="form-input" type="password" placeholder="Leave blank to keep current"/></div>
       </div>
       <div style="margin-top:16px;display:flex;gap:10px">
-        <button class="btn btn-primary" onclick="showToast('✓ Profile saved!')">Save Changes</button>
+        <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
         <button class="btn btn-danger" onclick="showToast('👋 Signed out!')">Sign Out</button>
       </div>
     </div>
@@ -947,13 +947,13 @@ select.form-input option{background:var(--s3)}
         <div id="selected-type-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-family:'Exo 2',sans-serif;font-weight:700;background:var(--glow);color:var(--brand);border:1px solid rgba(249,115,22,0.25);margin-top:4px"></div>
       </div>
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">Make *</label><input type="text" class="form-input" placeholder="Honda"/></div>
-        <div class="form-group"><label class="form-label">Model *</label><input type="text" class="form-input" placeholder="CB650R"/></div>
-        <div class="form-group"><label class="form-label">Year *</label><input type="number" class="form-input" placeholder="2023"/></div>
-        <div class="form-group"><label class="form-label">Current km *</label><input type="number" class="form-input" placeholder="0"/></div>
-        <div class="form-group"><label class="form-label">Nickname</label><input type="text" class="form-input" placeholder="My daily rider"/></div>
-        <div class="form-group"><label class="form-label">Color</label><input type="text" class="form-input" placeholder="Candy Red"/></div>
-        <div class="form-group full"><label class="form-label">VIN (optional)</label><input type="text" class="form-input" placeholder="JKAZX4R13MA000001"/></div>
+        <div class="form-group"><label class="form-label">Make *</label><input id="bike-make" type="text" class="form-input" placeholder="Honda"/></div>
+        <div class="form-group"><label class="form-label">Model *</label><input id="bike-model" type="text" class="form-input" placeholder="CB500F"/></div>
+        <div class="form-group"><label class="form-label">Year *</label><input id="bike-year" type="number" class="form-input" placeholder="2023" min="1900" max="2030"/></div>
+        <div class="form-group"><label class="form-label">Current km *</label><input id="bike-km" type="number" class="form-input" placeholder="0" min="0"/></div>
+        <div class="form-group"><label class="form-label">Nickname</label><input id="bike-nick" type="text" class="form-input" placeholder="My daily rider"/></div>
+        <div class="form-group"><label class="form-label">Color</label><input id="bike-color" type="text" class="form-input" placeholder="Candy Red"/></div>
+        <div class="form-group full"><label class="form-label">VIN (optional)</label><input id="bike-vin" type="text" class="form-input" placeholder="JKAZX4R13MA000001"/></div>
       </div>
       <div id="type-preview-box" style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--s3);border:1px solid var(--border)">
         <div style="font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px">Maintenance items that will be seeded</div>
@@ -1287,6 +1287,7 @@ const APP = {
   items: [],   // maintenance items
   history: [], // service records
   nextId: 1,
+  profile: { name: 'Ahmad Razif', email: 'ahmad@example.com' },
 };
 
 function uid() { return 'id_' + (APP.nextId++); }
@@ -1335,15 +1336,18 @@ function estimateItemsForBike(bike, typeKey) {
 
 // ─── ADD BIKE ────────────────────────────────────────────────────────────────
 function submitAddBike() {
-  if (!selectedBikeType) return;
-  const f = (id) => document.getElementById(id);
-  const make  = document.querySelector('#add-step-2 input[placeholder="Honda"]')?.value?.trim();
-  const model = document.querySelector('#add-step-2 input[placeholder="CB650R"]')?.value?.trim();
-  const year  = document.querySelector('#add-step-2 input[placeholder="2023"]')?.value?.trim();
-  const km    = document.querySelector('#add-step-2 input[placeholder="0"]')?.value?.trim();
-  const nick  = document.querySelector('#add-step-2 input[placeholder="My daily rider"]')?.value?.trim();
-  const color = document.querySelector('#add-step-2 input[placeholder="Candy Red"]')?.value?.trim();
-  if (!make || !model || !year || km === '') { showToast('⚠️ Fill in make, model, year & km'); return; }
+  if (!selectedBikeType) { showToast('⚠️ Please select a bike type first'); return; }
+  const g = (id) => document.getElementById(id)?.value?.trim() ?? '';
+  const make  = g('bike-make');
+  const model = g('bike-model');
+  const year  = g('bike-year');
+  const km    = g('bike-km');
+  const nick  = g('bike-nick');
+  const color = g('bike-color');
+  if (!make) { showToast('⚠️ Enter the bike make (e.g. Honda)'); return; }
+  if (!model) { showToast('⚠️ Enter the bike model (e.g. CB500F)'); return; }
+  if (!year) { showToast('⚠️ Enter the year'); return; }
+  if (km === '') { showToast('⚠️ Enter current odometer (0 if new)'); return; }
   const bike = {
     id: uid(), make, model, year: parseInt(year), km: parseInt(km) || 0,
     nickname: nick || '', color: color || '', bikeType: selectedBikeType,
@@ -1353,7 +1357,16 @@ function submitAddBike() {
   const newItems = estimateItemsForBike(bike, selectedBikeType);
   APP.items.push(...newItems);
   closeModal('addBike');
-  setTimeout(() => { addBikeStep1(); document.querySelectorAll('.type-card').forEach(c=>c.classList.remove('selected')); selectedBikeType=null; const nb=document.getElementById('type-next-btn'); if(nb){nb.disabled=true;nb.style.opacity='.5';} }, 300);
+  setTimeout(() => {
+    addBikeStep1();
+    document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+    selectedBikeType = null;
+    ['bike-make','bike-model','bike-year','bike-km','bike-nick','bike-color','bike-vin'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const nb = document.getElementById('type-next-btn');
+    if (nb) { nb.disabled = true; nb.style.opacity = '.5'; }
+  }, 300);
   const t = BIKE_TYPES[selectedBikeType];
   showToast(`🏍️ ${make} ${model} added! ${newItems.length} service items created.`);
   renderAll();
@@ -1467,6 +1480,23 @@ function getCurrency() {
 // ─── RENDER DASHBOARD ────────────────────────────────────────────────────────
 function renderDashboard() {
   const overdue  = APP.items.filter(i => i.status === 'overdue');
+  const noBikes  = APP.bikes.length === 0;
+
+  // Show/hide empty state vs real content
+  const emptyEl   = document.getElementById('dash-no-bikes');
+  const statsEl   = document.getElementById('dash-stats-grid');
+  const chartEl2  = document.getElementById('dash-charts-row');
+  const overdueHdr2 = document.getElementById('dash-overdue-hdr');
+  const soonHdr2    = document.getElementById('dash-soon-hdr');
+
+  if (emptyEl)    emptyEl.style.display    = noBikes ? '' : 'none';
+  if (statsEl)    statsEl.style.display    = noBikes ? 'none' : '';
+  if (chartEl2)   chartEl2.style.display   = noBikes ? 'none' : '';
+  if (overdueHdr2) overdueHdr2.style.display = noBikes ? 'none' : '';
+  if (soonHdr2)    soonHdr2.style.display   = noBikes ? 'none' : '';
+
+  if (noBikes) return; // nothing else to render
+
   // Pulse overdue card if needed
   const ovCard = document.getElementById('dash-overdue-card');
   const dueSoon  = APP.items.filter(i => i.status === 'due_soon');
@@ -1479,10 +1509,10 @@ function renderDashboard() {
   setEl('dash-soon',    dueSoon.length);
   setEl('dash-ok',      ok.length);
   setEl('dash-km',      totalKm > 1000 ? (totalKm/1000).toFixed(1)+'k' : totalKm);
-  // Badge on nav
-  const nb = document.querySelector('.nav-badge');
-  if (nb) { nb.textContent = overdue.length; nb.style.display = overdue.length ? '' : 'none'; }
-  const bnb = document.querySelector('.bnav-badge');
+  // Badge on nav — only show when there are overdues
+  const nb  = document.getElementById('sidebar-badge');
+  const bnb = document.getElementById('bnav-badge');
+  if (nb)  { nb.textContent  = overdue.length; nb.style.display  = overdue.length ? '' : 'none'; }
   if (bnb) { bnb.textContent = overdue.length; bnb.style.display = overdue.length ? '' : 'none'; }
   // Overdue section
   const overdueEl = document.getElementById('dash-overdue-list');
@@ -2085,6 +2115,42 @@ function tplSave(idx) {
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+function getInitials(name) {
+  return name.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').slice(0,2).join('') || '?';
+}
+
+function updateNameEverywhere(name) {
+  // Sidebar name + avatar
+  const nameEl   = document.getElementById('sidebar-user-name');
+  const avatarEl = document.getElementById('sidebar-avatar');
+  if (nameEl)   nameEl.textContent   = name;
+  if (avatarEl) avatarEl.textContent = getInitials(name);
+  // Any other elements with class profile-name-display
+  document.querySelectorAll('.profile-name-display').forEach(el => el.textContent = name);
+  // Dashboard sub greeting
+  const greetEl = document.getElementById('dash-greeting');
+  if (greetEl) greetEl.textContent = 'Welcome back, ' + name.split(' ')[0];
+}
+
+function previewNameChange(val) {
+  // Live preview as user types
+  if (val.trim()) updateNameEverywhere(val.trim());
+}
+
+function saveProfile() {
+  const nameEl  = document.getElementById('profile-name');
+  const emailEl = document.getElementById('profile-email');
+  const name  = nameEl?.value?.trim();
+  const email = emailEl?.value?.trim();
+  if (!name)  { showToast('⚠️ Name cannot be empty'); return; }
+  if (!email) { showToast('⚠️ Email cannot be empty'); return; }
+  APP.profile.name  = name;
+  APP.profile.email = email;
+  updateNameEverywhere(name);
+  showToast('✓ Profile saved!');
+}
+
 (function init() {
   // Set today's date on dashboard
   const dateEl = document.getElementById('dash-date');
@@ -2092,6 +2158,10 @@ function tplSave(idx) {
     const now = new Date();
     dateEl.textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
+  // Apply saved profile name to all name displays
+  updateNameEverywhere(APP.profile.name);
+  const greetEl = document.getElementById('dash-greeting');
+  if (greetEl) greetEl.textContent = 'Welcome back, ' + APP.profile.name.split(' ')[0];
   renderAll();
   renderTemplates('naked');
   renderTypeSwitcher();
@@ -2104,7 +2174,7 @@ function tplSave(idx) {
     <div class="bnav-item active" id="bnav-dashboard" onclick="nav('dashboard',null);setActiveNav('dashboard')">
       <span class="bnav-icon">📊</span>
       <span class="bnav-label">Dashboard</span>
-      <span class="bnav-badge">3</span>
+      <span class="bnav-badge" id="bnav-badge" style="display:none">0</span>
     </div>
     <div class="bnav-item" id="bnav-bikes" onclick="nav('bikes',null);setActiveNav('bikes')">
       <span class="bnav-icon">🏍️</span>
