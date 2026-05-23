@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MotoMaintain — Hosting & Setup Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b10;--s1:#0c1018;--s2:#111620;--s3:#171e2c;--s4:#1e2840;--s5:#263050;
+  --brand:#f97316;--brand-dim:#c2550e;--glow:rgba(249,115,22,0.15);
+  --text:#f0f4ff;--text2:#94a3b8;--text3:#475569;--border:rgba(255,255,255,0.07);
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.1);--green-border:rgba(34,197,94,0.2);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.1);--amber-border:rgba(245,158,11,0.25);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.1);--red-border:rgba(239,68,68,0.25);
+  --blue:#38bdf8;--blue-bg:rgba(56,189,248,0.1);--blue-border:rgba(56,189,248,0.2);
+  --purple:#a855f7;--purple-bg:rgba(168,85,247,0.1);--purple-border:rgba(168,85,247,0.2);
+  --r:12px;--code-bg:#050810;
+}
+html{background:var(--bg);scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Exo 2',sans-serif}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--s1)}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:3px}
+
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh;max-width:1100px;margin:0 auto}
+
+/* ── Sidebar ── */
+.toc{
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  padding:28px 16px;border-right:1px solid var(--border);
+  background:var(--s1);
+}
+.toc-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.toc-logo-icon{width:34px;height:34px;border-radius:9px;background:var(--glow);border:1px solid rgba(249,115,22,0.25);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.toc-logo-title{font-family:'Exo 2',sans-serif;font-size:13px;font-weight:800;color:var(--text)}
+.toc-logo-sub{font-size:10px;color:var(--text3)}
+.toc-section{margin-bottom:18px}
+.toc-section-label{font-family:'Exo 2',sans-serif;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;padding:0 8px}
+.toc-link{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;font-size:12px;font-family:'Exo 2',sans-serif;font-weight:600;color:var(--text3);text-decoration:none;transition:all .15s;margin-bottom:1px}
+.toc-link:hover{background:var(--s3);color:var(--text2)}
+.toc-link.active{background:var(--glow);color:var(--brand);border:1px solid rgba(249,115,22,0.2)}
+.toc-num{width:18px;height:18px;border-radius:4px;background:var(--s4);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
+.toc-link.active .toc-num{background:var(--brand);color:#fff}
+
+/* ── Content ── */
+.content{padding:40px 48px 80px;min-width:0}
+
+/* ── Hero ── */
+.hero{display:flex;align-items:flex-start;gap:20px;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+.hero-icon{width:60px;height:60px;border-radius:16px;background:var(--glow);border:1px solid rgba(249,115,22,0.3);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.hero h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.hero p{font-size:13px;color:var(--text2)}
+
+/* ── Part headers ── */
+.part-header{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;border-radius:var(--r);margin:40px 0 24px;
+}
+.part-icon{font-size:22px;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.part-title{font-family:'Exo 2',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.3px}
+.part-sub{font-size:12px;margin-top:3px}
+
+/* ── Step blocks ── */
+.step{
+  margin-bottom:28px;padding:22px 24px;
+  background:var(--s2);border:1px solid var(--border);border-radius:var(--r);
+}
+.step:target{border-color:rgba(249,115,22,0.35);animation:flash .6s ease}
+@keyframes flash{0%,100%{border-color:var(--border)}50%{border-color:rgba(249,115,22,.6)}}
+.step-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.step-num{
+  width:32px;height:32px;border-radius:9px;
+  background:var(--brand);display:flex;align-items:center;justify-content:center;
+  font-family:'Exo 2',sans-serif;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;
+}
+.step-title{font-family:'Exo 2',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.2px;padding-top:4px}
+.step-desc{font-size:13px;color:var(--text2);margin-top:3px;line-height:1.5}
+.step-body p{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:10px}
+.step-body p:last-child{margin-bottom:0}
+
+/* ── Code blocks ── */
+pre{background:var(--code-bg);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:12px 0;position:relative}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#e2e8f0;line-height:1.65}
+.cmd{color:#38bdf8}.string{color:#86efac}.comment{color:#475569}.hl{color:#f97316}.warn{color:#f59e0b}
+p code,li code,td code{background:var(--s3);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--brand);font-family:'JetBrains Mono',monospace}
+.copy-btn{position:absolute;top:9px;right:10px;background:var(--s3);border:1px solid var(--border);border-radius:5px;color:var(--text3);font-size:11px;font-family:'Exo 2',sans-serif;font-weight:700;padding:3px 8px;cursor:pointer;transition:all .15s}
+.copy-btn:hover{background:var(--s4);color:var(--text2)}.copy-btn.copied{color:var(--green);border-color:var(--green-border)}
+
+/* ── Callouts ── */
+.callout{display:flex;gap:12px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.55;margin:14px 0}
+.callout-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.callout.warn{background:var(--amber-bg);border:1px solid var(--amber-border);color:#fcd34d}
+.callout.info{background:var(--blue-bg);border:1px solid var(--blue-border);color:var(--blue)}
+.callout.success{background:var(--green-bg);border:1px solid var(--green-border);color:#86efac}
+.callout.danger{background:var(--red-bg);border:1px solid var(--red-border);color:#fca5a5}
+.callout.purple{background:var(--purple-bg);border:1px solid var(--purple-border);color:#d8b4fe}
+
+/* ── Step list inside step ── */
+ol.substeps{list-style:none;margin:10px 0}
+ol.substeps li{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.5}
+ol.substeps li:last-child{border-bottom:none}
+.substep-num{width:20px;height:20px;border-radius:5px;background:var(--s4);display:flex;align-items:center;justify-content:center;font-family:'Exo 2',sans-serif;font-size:10px;font-weight:800;color:var(--text3);flex-shrink:0;margin-top:1px}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td:first-child{color:var(--text);font-weight:500}
+
+/* ── Pill ── */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-family:'Exo 2',sans-serif;font-weight:700}
+.pill-brand{background:var(--glow);color:var(--brand);border:1px solid rgba(249,115,22,0.25)}
+.pill-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.pill-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.pill-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+
+/* ── Checklist ── */
+.checklist{list-style:none;margin:10px 0}
+.checklist li{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);cursor:pointer;user-select:none}
+.checklist li:last-child{border-bottom:none}
+.checklist li input{width:16px;height:16px;accent-color:var(--brand);margin-top:2px;flex-shrink:0;cursor:pointer}
+.checklist li.done label{text-decoration:line-through;color:var(--text3)}
+
+/* ── Final card ── */
+.finish{background:linear-gradient(135deg,rgba(249,115,22,.08),rgba(56,189,248,.05));border:1px solid rgba(249,115,22,.3);border-radius:var(--r);padding:28px;margin-top:40px;text-align:center}
+.finish h2{font-size:20px;margin-bottom:8px}
+.finish p{font-size:13px;color:var(--text2)}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  .toc{display:none}
+  .content{padding:24px 18px 60px}
+  .hero{flex-direction:column;gap:14px}
+  pre code{font-size:11.5px}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- TOC SIDEBAR -->
+<nav class="toc" id="toc">
+  <div class="toc-logo">
+    <div class="toc-logo-icon">🏍️</div>
+    <div><div class="toc-logo-title">MotoMaintain</div><div class="toc-logo-sub">Hosting & Setup Guide</div></div>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Part A — GitHub Pages</div>
+    <a class="toc-link active" href="#a1" id="nav-a1"><span class="toc-num">1</span>Install Git</a>
+    <a class="toc-link" href="#a2" id="nav-a2"><span class="toc-num">2</span>Create GitHub Repo</a>
+    <a class="toc-link" href="#a3" id="nav-a3"><span class="toc-num">3</span>Init & Push</a>
+    <a class="toc-link" href="#a4" id="nav-a4"><span class="toc-num">4</span>Enable Pages</a>
+    <a class="toc-link" href="#a5" id="nav-a5"><span class="toc-num">5</span>Custom Domain</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Part B — Appwrite (Node)</div>
+    <a class="toc-link" href="#b1" id="nav-b1"><span class="toc-num">1</span>Create Project</a>
+    <a class="toc-link" href="#b2" id="nav-b2"><span class="toc-num">2</span>Get API Key</a>
+    <a class="toc-link" href="#b3" id="nav-b3"><span class="toc-num">3</span>Configure .env</a>
+    <a class="toc-link" href="#b4" id="nav-b4"><span class="toc-num">4</span>Install & Run</a>
+    <a class="toc-link" href="#b5" id="nav-b5"><span class="toc-num">5</span>Seed Templates</a>
+    <a class="toc-link" href="#b6" id="nav-b6"><span class="toc-num">6</span>Verify</a>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="hero">
+    <div class="hero-icon">🚀</div>
+    <div>
+      <h1>Hosting & Database Setup</h1>
+      <p>Two parts: host the app on <strong style="color:var(--text)">GitHub Pages</strong> (free, permanent URL), then set up the <strong style="color:var(--text)">Appwrite database</strong> automatically with the Node script.<br/>Total time: ~20 minutes.</p>
+    </div>
+  </div>
+
+  <!-- ═══ PART A ═══ -->
+  <div class="part-header" style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.15)">
+    <div class="part-icon" style="background:var(--glow)">🐙</div>
+    <div>
+      <div class="part-title">Part A — GitHub Pages</div>
+      <div class="part-sub" style="color:var(--text3)">Host index.html at a free public URL like <code>yourusername.github.io/moto-maintain</code></div>
+    </div>
+  </div>
+
+  <!-- A1 -->
+  <div class="step" id="a1">
+    <div class="step-header">
+      <div class="step-num">A1</div>
+      <div><div class="step-title">Install Git on your computer</div><div class="step-desc">One-time setup. Skip if you already have Git.</div></div>
+    </div>
+    <div class="step-body">
+      <p>Open a terminal (Mac: Terminal app; Windows: search "Command Prompt" or "PowerShell"; Linux: any terminal) and run:</p>
+      <pre><code><span class="cmd">git --version</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+      <p>If you see a version number like <code>git version 2.43.0</code>, skip to A2. If not, install it:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>OS</th><th>How to install</th></tr></thead>
+        <tbody>
+          <tr><td>macOS</td><td>Run <code>git --version</code> — macOS will automatically prompt to install Developer Tools. Click Install.</td></tr>
+          <tr><td>Windows</td><td>Go to <strong>git-scm.com/download/win</strong> → download the installer → run it → click Next through all defaults.</td></tr>
+          <tr><td>Ubuntu / Debian</td><td><code>sudo apt update && sudo apt install git -y</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>After installing, configure your identity (this labels your commits — required by Git):</p>
+      <pre><code><span class="cmd">git config --global user.name  "Your Full Name"</span>
+<span class="cmd">git config --global user.email "you@example.com"</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+      <div class="callout info"><span class="callout-icon">💡</span><div>Use the same email address as your GitHub account. This links your commits to your profile.</div></div>
+    </div>
+  </div>
+
+  <!-- A2 -->
+  <div class="step" id="a2">
+    <div class="step-header">
+      <div class="step-num">A2</div>
+      <div><div class="step-title">Create the GitHub repository</div><div class="step-desc">A repository is the online folder that stores your code.</div></div>
+    </div>
+    <div class="step-body">
+      <ol class="substeps">
+        <li><span class="substep-num">1</span><span>Go to <strong style="color:var(--blue)">github.com</strong> and sign in (or create a free account if you don't have one).</span></li>
+        <li><span class="substep-num">2</span><span>Click the <strong>＋</strong> icon in the top-right corner → <strong>New repository</strong>.</span></li>
+        <li><span class="substep-num">3</span><span>Set <strong>Repository name</strong> to <code>moto-maintain</code>. This becomes part of your URL.</span></li>
+        <li><span class="substep-num">4</span><span>Set visibility to <strong>Public</strong>. (GitHub Pages requires Public on the free plan.)</span></li>
+        <li><span class="substep-num">5</span><span><strong style="color:var(--red)">Leave all checkboxes unchecked.</strong> Do NOT add a README, .gitignore, or licence file — adding them now causes a merge conflict in the next step.</span></li>
+        <li><span class="substep-num">6</span><span>Click <strong>Create repository</strong>. You'll land on an empty repo page — keep this tab open.</span></li>
+      </ol>
+      <p>Your repository URL will look like: <code>https://github.com/yourusername/moto-maintain</code></p>
+    </div>
+  </div>
+
+  <!-- A3 -->
+  <div class="step" id="a3">
+    <div class="step-header">
+      <div class="step-num">A3</div>
+      <div><div class="step-title">Put index.html in a folder and push to GitHub</div><div class="step-desc">GitHub Pages serves files directly from your repository.</div></div>
+    </div>
+    <div class="step-body">
+      <p><strong>1. Create a project folder</strong> and place <code>index.html</code> inside it:</p>
+      <pre><code><span class="comment"># Create the folder anywhere you like</span>
+<span class="cmd">mkdir moto-maintain</span>
+<span class="cmd">cd moto-maintain</span>
+
+<span class="comment"># Copy your index.html into this folder</span>
+<span class="comment"># (or move it manually using Finder / File Explorer)</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <p><strong>2. Initialise Git and make your first commit:</strong></p>
+      <pre><code><span class="cmd">git init</span>
+<span class="cmd">git add index.html</span>
+<span class="cmd">git commit -m "Add MotoMaintain app"</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <p><strong>3. Connect to GitHub and push.</strong> Replace <code>yourusername</code> with your GitHub username:</p>
+      <pre><code><span class="cmd">git remote add origin https://github.com/yourusername/moto-maintain.git</span>
+<span class="cmd">git branch -M main</span>
+<span class="cmd">git push -u origin main</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <p>Git will ask for your GitHub credentials. For the <strong>password</strong>, you cannot use your account password — you need a Personal Access Token:</p>
+      <ol class="substeps">
+        <li><span class="substep-num">1</span><span>On GitHub, click your profile photo → <strong>Settings</strong> → scroll to bottom → <strong>Developer settings</strong>.</span></li>
+        <li><span class="substep-num">2</span><span>Click <strong>Personal access tokens</strong> → <strong>Tokens (classic)</strong> → <strong>Generate new token (classic)</strong>.</span></li>
+        <li><span class="substep-num">3</span><span>Note: <code>moto-maintain</code> · Expiration: 90 days · Scope: tick <strong>repo</strong> only → click <strong>Generate token</strong>.</span></li>
+        <li><span class="substep-num">4</span><span><strong style="color:var(--amber)">Copy the token immediately</strong> — it's shown once. Paste it as the password when Git prompts.</span></li>
+      </ol>
+
+      <div class="callout success"><span class="callout-icon">✅</span><div>You should see output like <code>Branch 'main' set up to track remote branch 'main' from 'origin'</code>. Your file is now on GitHub.</div></div>
+    </div>
+  </div>
+
+  <!-- A4 -->
+  <div class="step" id="a4">
+    <div class="step-header">
+      <div class="step-num">A4</div>
+      <div><div class="step-title">Enable GitHub Pages</div><div class="step-desc">Turns your repository into a live public website in about 60 seconds.</div></div>
+    </div>
+    <div class="step-body">
+      <ol class="substeps">
+        <li><span class="substep-num">1</span><span>Go to your repository on GitHub: <code>github.com/yourusername/moto-maintain</code>.</span></li>
+        <li><span class="substep-num">2</span><span>Click the <strong>Settings</strong> tab (the gear icon, far right of the tab row).</span></li>
+        <li><span class="substep-num">3</span><span>In the left sidebar, scroll down and click <strong>Pages</strong>.</span></li>
+        <li><span class="substep-num">4</span><span>Under <strong>Source</strong>, click the dropdown that says "None" and select <strong>Deploy from a branch</strong>.</span></li>
+        <li><span class="substep-num">5</span><span>Under <strong>Branch</strong>, select <strong>main</strong> and leave the folder as <strong>/ (root)</strong>. Click <strong>Save</strong>.</span></li>
+        <li><span class="substep-num">6</span><span>Wait about 60 seconds, then refresh the Pages settings page. You'll see a green banner with your URL.</span></li>
+      </ol>
+
+      <p>Your live URL will be:</p>
+      <pre><code><span class="hl">https://yourusername.github.io/moto-maintain/</span></code></pre>
+
+      <div class="callout warn"><span class="callout-icon">⏱</span><div>The first deploy takes 1–3 minutes. Subsequent updates (after <code>git push</code>) are usually live within 30 seconds. If you get a 404, wait a minute and refresh.</div></div>
+
+      <p>To verify it worked, go to <strong>Actions</strong> tab in your repo. You'll see a workflow called <strong>pages build and deployment</strong> with a green tick once it's live.</p>
+
+      <div class="callout info"><span class="callout-icon">🔄</span><div>Every time you update the app and push with <code>git add . → git commit → git push</code>, GitHub Pages automatically rebuilds and your live URL updates within a minute.</div></div>
+    </div>
+  </div>
+
+  <!-- A5 -->
+  <div class="step" id="a5">
+    <div class="step-header">
+      <div class="step-num">A5</div>
+      <div><div class="step-title">Optional — Use a custom domain</div><div class="step-desc">Point your own domain (e.g. motomaintain.com) to GitHub Pages.</div></div>
+    </div>
+    <div class="step-body">
+      <p>If you own a domain, you can point it to your GitHub Pages site:</p>
+      <ol class="substeps">
+        <li><span class="substep-num">1</span><span>In your domain registrar's DNS settings, add a <strong>CNAME record</strong>: <code>www</code> → <code>yourusername.github.io</code>.</span></li>
+        <li><span class="substep-num">2</span><span>For the root domain (no www), add 4 <strong>A records</strong> pointing to GitHub's IPs: <code>185.199.108.153</code>, <code>185.199.109.153</code>, <code>185.199.110.153</code>, <code>185.199.111.153</code>.</span></li>
+        <li><span class="substep-num">3</span><span>Back in GitHub → Settings → Pages → <strong>Custom domain</strong> → type your domain → Save.</span></li>
+        <li><span class="substep-num">4</span><span>Tick <strong>Enforce HTTPS</strong> once it appears (may take 10–30 minutes for DNS to propagate).</span></li>
+      </ol>
+      <div class="callout info"><span class="callout-icon">💡</span><div>DNS propagation takes 10 minutes to 48 hours depending on your registrar. Don't be alarmed if your domain doesn't work immediately.</div></div>
+    </div>
+  </div>
+
+
+  <!-- ═══ PART B ═══ -->
+  <div class="part-header" style="background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.2);margin-top:20px">
+    <div class="part-icon" style="background:rgba(168,85,247,0.15)">🗄️</div>
+    <div>
+      <div class="part-title">Part B — Appwrite Database (Node Script)</div>
+      <div class="part-sub" style="color:var(--text3)">Automatically creates all 5 collections, indexes, and storage bucket with one command</div>
+    </div>
+  </div>
+
+  <!-- B1 -->
+  <div class="step" id="b1">
+    <div class="step-header">
+      <div class="step-num">B1</div>
+      <div><div class="step-title">Create an Appwrite project</div><div class="step-desc">Appwrite Cloud is free. No credit card required.</div></div>
+    </div>
+    <div class="step-body">
+      <ol class="substeps">
+        <li><span class="substep-num">1</span><span>Go to <strong style="color:var(--blue)">cloud.appwrite.io</strong> and sign up for a free account (or log in).</span></li>
+        <li><span class="substep-num">2</span><span>Click <strong>Create Project</strong> → enter name <code>MotoMaintain</code> → click Create.</span></li>
+        <li><span class="substep-num">3</span><span>On the next screen it asks to add a platform. Click <strong>Web app</strong>.</span></li>
+        <li><span class="substep-num">4</span><span>For <strong>Name</strong> type <code>MotoMaintain Web</code>. For <strong>Hostname</strong> type <code>localhost</code> (you can add your GitHub Pages domain later).</span></li>
+        <li><span class="substep-num">5</span><span>Click <strong>Next</strong> through the remaining screens — you don't need to install an SDK now.</span></li>
+        <li><span class="substep-num">6</span><span>On the project Overview page, find the <strong>Project ID</strong> — it's a short string like <code>67a3f9b2c1d4e</code>. <strong>Copy it.</strong></span></li>
+      </ol>
+      <div class="callout info"><span class="callout-icon">📋</span><div>The Project ID is on the Settings page too: Project → Settings → General → copy the Project ID field.</div></div>
+    </div>
+  </div>
+
+  <!-- B2 -->
+  <div class="step" id="b2">
+    <div class="step-header">
+      <div class="step-num">B2</div>
+      <div><div class="step-title">Create a Server API Key</div><div class="step-desc">The Node script needs a key with full database access to create collections.</div></div>
+    </div>
+    <div class="step-body">
+      <ol class="substeps">
+        <li><span class="substep-num">1</span><span>In your Appwrite project, click <strong>Settings</strong> in the left sidebar.</span></li>
+        <li><span class="substep-num">2</span><span>Click <strong>API Keys</strong> → <strong>Create API key</strong>.</span></li>
+        <li><span class="substep-num">3</span><span>Name it <code>MotoMaintain Setup Key</code>.</span></li>
+        <li><span class="substep-num">4</span><span>Under <strong>Add scope</strong>, expand each section and tick everything under: <strong>Databases</strong>, <strong>Users</strong>, <strong>Storage</strong>.</span></li>
+        <li><span class="substep-num">5</span><span>Set <strong>Expiration</strong> to 1 day (you only need it for setup).</span></li>
+        <li><span class="substep-num">6</span><span>Click <strong>Create</strong>. <strong style="color:var(--amber)">Copy the key immediately</strong> — it's only shown once.</span></li>
+      </ol>
+      <div class="callout danger"><span class="callout-icon">🔐</span><div>Never paste this API key into your index.html or commit it to GitHub. It has admin access to your entire Appwrite project.</div></div>
+    </div>
+  </div>
+
+  <!-- B3 -->
+  <div class="step" id="b3">
+    <div class="step-header">
+      <div class="step-num">B3</div>
+      <div><div class="step-title">Set up the project folder and .env file</div><div class="step-desc">The Node script reads credentials from a local .env file — never hardcoded.</div></div>
+    </div>
+    <div class="step-body">
+      <p>Make sure Node.js is installed. Check with:</p>
+      <pre><code><span class="cmd">node --version</span>
+<span class="comment"># Should show v18 or higher</span>
+<span class="cmd">npm --version</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+      <p>If Node is not installed, download it from <strong>nodejs.org</strong> → click the LTS version → run the installer.</p>
+
+      <p>Inside your <code>moto-maintain</code> folder, create a <code>backend</code> subfolder and set it up:</p>
+      <pre><code><span class="cmd">cd moto-maintain</span>
+<span class="cmd">mkdir backend</span>
+<span class="cmd">cd backend</span>
+<span class="cmd">npm init -y</span>
+<span class="cmd">npm install node-appwrite dotenv</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <p>Now create the <code>.env</code> file. Open a text editor, create a file named <code>.env</code> inside <code>backend/</code>, and fill it in:</p>
+      <pre><code><span class="comment"># backend/.env — never commit this file</span>
+<span class="hl">APPWRITE_ENDPOINT</span>=https://cloud.appwrite.io/v1
+<span class="hl">APPWRITE_PROJECT_ID</span>=<span class="string">paste_your_project_id_here</span>
+<span class="hl">APPWRITE_API_KEY</span>=<span class="string">paste_your_api_key_here</span>
+<span class="hl">APPWRITE_DATABASE_ID</span>=moto_maintain_db
+<span class="hl">STORAGE_BUCKET_ID</span>=service_attachments</code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <p>Create a <code>.gitignore</code> in the <code>backend/</code> folder so the key is never uploaded:</p>
+      <pre><code><span class="comment"># backend/.gitignore</span>
+<span class="string">node_modules/
+.env</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <div class="callout danger"><span class="callout-icon">🚨</span><div>Triple-check that <code>.env</code> is in your <code>.gitignore</code> before running <code>git add</code>. Run <code>git status</code> and confirm <code>.env</code> does not appear in the list.</div></div>
+    </div>
+  </div>
+
+  <!-- B4 -->
+  <div class="step" id="b4">
+    <div class="step-header">
+      <div class="step-num">B4</div>
+      <div><div class="step-title">Place the setup script and run it</div><div class="step-desc">The script creates all 5 collections, attributes, indexes, and the storage bucket.</div></div>
+    </div>
+    <div class="step-body">
+      <p>Copy the <code>appwrite-setup.js</code> file into your <code>backend/</code> folder. Your folder structure should now look like:</p>
+      <pre><code>moto-maintain/
+├── index.html                 <span class="comment">← your app</span>
+└── backend/
+    ├── appwrite-setup.js      <span class="comment">← the setup script</span>
+    ├── .env                   <span class="comment">← your credentials (never commit)</span>
+    ├── .gitignore
+    ├── package.json
+    └── node_modules/</code></pre>
+
+      <p>Now run the setup script from inside <code>backend/</code>:</p>
+      <pre><code><span class="cmd">cd backend</span>
+<span class="cmd">node appwrite-setup.js</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+
+      <p>Watch the output. You should see each collection being created:</p>
+      <pre><code><span class="string">╔════════════════════════════════════════════════╗
+║   🏍️  MotoMaintain — Appwrite Setup Script     ║
+╚════════════════════════════════════════════════╝
+
+  Endpoint:   https://cloud.appwrite.io/v1
+  Project ID: 6a0fce4800389b0e9917
+  Database:   moto_maintain_db
+
+── Step 1: Database ────────────────────────────────────
+  ✅ Database created: moto_maintain_db
+
+── Step 2: Collection — Motorcycles ────────────────────
+  ✅ Collection created: motorcycles
+  → Adding 10 attributes...
+  ✅ Attribute: userId (string)
+  ✅ Attribute: make (string)
+  ✅ Attribute: model (string)
+  <span class="comment">... (continues for all 5 collections)</span>
+
+── Step 3: Storage Bucket ──────────────────────────────
+  ✅ Bucket created: service_attachments (10 MB)
+
+╔════════════════════════════════════════════════╗
+║   ✅  Setup complete!                          ║
+╚════════════════════════════════════════════════╝</span></code></pre>
+
+      <div class="callout warn"><span class="callout-icon">⏱</span><div>The script adds a small delay between attribute creations. It takes about 60–90 seconds total. This is normal — Appwrite needs time to activate each attribute before indexes can be built on top of them.</div></div>
+    </div>
+  </div>
+
+  <!-- B5 -->
+  <div class="step" id="b5">
+    <div class="step-header">
+      <div class="step-num">B5</div>
+      <div><div class="step-title">Seed service templates</div><div class="step-desc">Populates the service_templates collection with default intervals per bike type.</div></div>
+    </div>
+    <div class="step-body">
+      <p>Copy <code>seed.js</code> into <code>backend/</code> and run it:</p>
+      <pre><code><span class="cmd">node seed.js</span></code><button class="copy-btn" onclick="cp(this)">copy</button></pre>
+      <p>Expected output:</p>
+      <pre><code><span class="string">🌱 MotoMaintain Seed Script
+──────────────────────────────
+✅ Created: Engine Oil (5,000 km / 180 days)
+✅ Created: Oil Filter (5,000 km / 180 days)
+✅ Created: Air Filter (15,000 km / 365 days)
+<span class="comment">... (12 total)</span>
+📊 Results: 12 created, 0 skipped
+✅ Seed complete!</span></code></pre>
+
+      <div class="callout info"><span class="callout-icon">🔁</span><div>The seed script is safe to re-run. It checks if each template already exists and skips duplicates — you'll see <code>⏭ Skipping</code> for existing ones.</div></div>
+    </div>
+  </div>
+
+  <!-- B6 -->
+  <div class="step" id="b6">
+    <div class="step-header">
+      <div class="step-num">B6</div>
+      <div><div class="step-title">Verify everything in Appwrite Console</div><div class="step-desc">Confirm all collections, attributes, and indexes were created correctly.</div></div>
+    </div>
+    <div class="step-body">
+      <p>Go to <strong>cloud.appwrite.io</strong> → your project → <strong>Databases</strong> → <strong>MotoMaintain DB</strong>. You should see 5 collections:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Collection ID</th><th>Documents</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><code>motorcycles</code></td><td>0</td><td><span class="pill pill-green">✓ Created</span></td></tr>
+          <tr><td><code>maintenance_items</code></td><td>0</td><td><span class="pill pill-green">✓ Created</span></td></tr>
+          <tr><td><code>service_records</code></td><td>0</td><td><span class="pill pill-green">✓ Created</span></td></tr>
+          <tr><td><code>service_templates</code></td><td>12</td><td><span class="pill pill-green">✓ Seeded</span></td></tr>
+          <tr><td><code>odometer_logs</code></td><td>0</td><td><span class="pill pill-green">✓ Created</span></td></tr>
+        </tbody>
+      </table></div>
+      <p>Go to <strong>Storage</strong> — you should see a bucket called <strong>Service Attachments</strong>.</p>
+
+      <div class="callout info"><span class="callout-icon">🌐</span><div>Now update your <strong>index.html</strong> with your Project ID (in the Appwrite settings section of the app) and push to GitHub. Your live Pages URL will connect to this database.</div></div>
+
+      <div class="callout warn"><span class="callout-icon">⚠️</span><div>Add your live GitHub Pages URL to Appwrite's allowed platforms: <strong>Settings → Platforms → Add Platform → Web</strong> → enter <code>yourusername.github.io</code> as the hostname. Otherwise Appwrite will block requests from your live URL.</div></div>
+
+      <!-- Troubleshooting -->
+      <div style="margin-top:20px">
+        <div style="font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Common errors</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Error message</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td><code>401 Unauthorized</code></td><td>Your <code>APPWRITE_API_KEY</code> is wrong or expired. Generate a new one in Appwrite Settings → API Keys.</td></tr>
+            <tr><td><code>Project not found</code></td><td>Your <code>APPWRITE_PROJECT_ID</code> is wrong. Copy it from Appwrite Settings → General.</td></tr>
+            <tr><td><code>Collection already exists</code></td><td>Safe — the script skips existing collections. Run again; it won't duplicate anything.</td></tr>
+            <tr><td><code>Cannot find module 'node-appwrite'</code></td><td>Run <code>npm install</code> inside the <code>backend/</code> folder first.</td></tr>
+            <tr><td><code>ENOENT: .env not found</code></td><td>Make sure <code>.env</code> is in the <code>backend/</code> folder, not the parent folder.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finish -->
+  <div class="finish">
+    <div style="font-size:40px;margin-bottom:10px">🎉</div>
+    <h2>You're live!</h2>
+    <p style="margin-top:8px">Your app is hosted at <code>yourusername.github.io/moto-maintain</code> and connected to Appwrite. Push any future changes with <code>git add . → git commit → git push</code> and they go live automatically.</p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+      <span class="pill pill-green">✓ App hosted on GitHub Pages</span>
+      <span class="pill pill-brand">✓ Database on Appwrite Cloud</span>
+      <span class="pill pill-blue">✓ Free on both platforms</span>
+    </div>
+  </div>
+
+</div><!-- /content -->
+</div><!-- /layout -->
+
+<script>
+function cp(btn) {
+  const text = btn.closest('pre').querySelector('code').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Scrollspy
+const sections = document.querySelectorAll('.step[id]');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      document.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
+      const link = document.getElementById('nav-' + id);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.4 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
