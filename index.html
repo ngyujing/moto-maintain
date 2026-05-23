@@ -728,6 +728,7 @@ select.form-input option{background:var(--s3)}
       <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border-color:var(--red-border)" onclick="filterMaint('overdue')">Overdue</button>
       <button class="btn btn-sm" style="background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)" onclick="filterMaint('soon')">Due Soon</button>
       <button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);border-color:var(--green-border)" onclick="filterMaint('ok')">OK</button>
+      <button class="btn btn-secondary btn-sm" id="maint-edit-intervals-btn" onclick="openEditIntervals()" style="display:none">✏️ Edit Intervals</button>
     </div>
   </div>
   <div class="search-wrap">
@@ -1008,6 +1009,28 @@ select.form-input option{background:var(--s3)}
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('odometer')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="doUpdateOdometer()">Update</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-editInterval">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Edit Service Intervals</div>
+      <div class="modal-close" onclick="closeModal('editInterval')">✕</div>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:4px">
+      <strong id="ei-bike-name">Motorcycle</strong>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+      Changes apply to this bike only and take effect immediately.
+    </div>
+    <!-- Interval list -->
+    <div id="ei-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:10px"></div>
+    <button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:14px" onclick="addEiRow()">＋ Add Custom Item</button>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('editInterval')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditIntervals()">✓ Save Changes</button>
     </div>
   </div>
 </div>
@@ -1745,6 +1768,7 @@ function renderBikes() {
       <div class="bike-actions">
         <button class="btn btn-primary btn-sm" style="flex:1" onclick="openBikeDetail('${b.id}')">View Details</button>
         <button class="btn btn-secondary btn-sm" onclick="openOdometerModal('${b.id}')" title="Update km">⚡</button>
+        <button class="btn btn-secondary btn-sm" onclick="openEditIntervals('${b.id}')" title="Edit intervals">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteBike('${b.id}')" title="Delete">🗑</button>
       </div>
     </div>`;
@@ -1787,6 +1811,7 @@ function renderBikeDetail(bikeId) {
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-secondary btn-sm" onclick="openOdometerModal('${bike.id}')">⚡ Update km</button>
+        <button class="btn btn-secondary btn-sm" onclick="openEditIntervals('${bike.id}')">✏️ Intervals</button>
         <button class="btn btn-primary btn-sm" onclick="nav('maintenance',null);setActiveNav('maintenance');renderMaintenance('${bike.id}')">🔧 Maintenance</button>
       </div>
     </div>
@@ -1897,6 +1922,9 @@ function renderMaintenance(bikeId) {
       </div>`).join('')}</div>`;
   });
   if (titleEl && !_maintBikeId) { titleEl.textContent = 'Maintenance'; if (subEl) subEl.textContent = 'All service items across all bikes'; }
+  // Show Edit Intervals button only when viewing a single bike
+  const eiBtn = document.getElementById('maint-edit-intervals-btn');
+  if (eiBtn) eiBtn.style.display = _maintBikeId ? '' : 'none';
   listEl.innerHTML = html || `<div class="card" style="padding:40px;text-align:center;color:var(--text3)">No items to show.</div>`;
 }
 
@@ -2030,6 +2058,166 @@ function renderOverview() {
             <div class="km-val">${count}x</div>
           </div>`).join('')}</div>`}`;
   }
+}
+
+
+// ─── EDIT INTERVALS MODAL ────────────────────────────────────────────────────
+let _eiItems   = []; // working copy of items being edited
+let _eiBikeId  = null;
+
+function openEditIntervals(bikeId) {
+  // bikeId can come from the maintenance page context or be passed directly
+  _eiBikeId = bikeId || _maintBikeId;
+  if (!_eiBikeId) { showToast('⚠️ Open a specific bike\u2019s maintenance page first'); return; }
+  const bike  = APP.bikes.find(b => b.id === _eiBikeId);
+  if (!bike) return;
+
+  // Deep copy items so edits are not live until saved
+  _eiItems = APP.items
+    .filter(i => i.bikeId === _eiBikeId)
+    .map(i => ({ ...i }));
+
+  const nameEl = document.getElementById('ei-bike-name');
+  if (nameEl) nameEl.textContent = bike.make + ' ' + bike.model + ' ' + bike.year;
+
+  renderEiList();
+  openModal('editInterval');
+}
+
+function renderEiList() {
+  const list = document.getElementById('ei-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  _eiItems.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'ci-row';
+    row.dataset.idx = idx;
+
+    // Determine if this is a "custom" item (added by user, not from bike type template)
+    const isCustom = !!(item.isCustom);
+    const namePart = isCustom
+      ? '<input class="form-input ci-name" style="flex:1;padding:4px 6px;font-size:12px" value="' + item.partLabel.replace(/"/g, '&quot;') + '" placeholder="Part name" oninput="_eiItems[' + idx + '].partLabel=this.value"/>'
+      : '<span class="ci-name">' + item.partLabel + '</span>';
+
+    row.innerHTML =
+      '<span class="ci-icon">' + icon(item.partType) + '</span>' +
+      namePart +
+      '<input class="ci-input" type="number" min="0" step="500" value="' + (item.intervalKm || 0) + '" title="km interval" ' +
+        'oninput="_eiItems[' + idx + '].intervalKm=parseInt(this.value)||0"/>' +
+      '<span class="ci-unit">km</span>' +
+      '<input class="ci-input" type="number" min="1" step="1" value="' + (item.intervalDays || 365) + '" title="day interval" ' +
+        'oninput="_eiItems[' + idx + '].intervalDays=parseInt(this.value)||1"/>' +
+      '<span class="ci-unit">days</span>' +
+      '<button class="ci-del" onclick="removeEiItem(' + idx + ')" title="Remove this service item">✕</button>';
+
+    list.appendChild(row);
+  });
+
+  if (_eiItems.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No service items. Add one below.</div>';
+  }
+}
+
+function removeEiItem(idx) {
+  _eiItems.splice(idx, 1);
+  renderEiList();
+}
+
+function addEiRow() {
+  _eiItems.push({
+    id:           'ei_' + uid(),
+    bikeId:       _eiBikeId,
+    partType:     'custom_' + Date.now(),
+    partLabel:    '',
+    intervalKm:   5000,
+    intervalDays: 365,
+    lastKm:       null,
+    lastDate:     null,
+    nextKm:       null,
+    nextDate:     null,
+    status:       'never_serviced',
+    note:         '',
+    isCustom:     true,
+  });
+  renderEiList();
+  const list = document.getElementById('ei-list');
+  if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+}
+
+function saveEditIntervals() {
+  // Validate: every item must have a label
+  const invalid = _eiItems.find(i => !i.partLabel || !i.partLabel.trim());
+  if (invalid) { showToast('⚠️ All items need a name'); return; }
+
+  const bike = APP.bikes.find(b => b.id === _eiBikeId);
+  if (!bike) { closeModal('editInterval'); return; }
+
+  // Recalculate nextKm/nextDate for any items whose interval changed,
+  // and recompute status based on current bike km
+  _eiItems.forEach(edited => {
+    const existing = APP.items.find(i => i.id === edited.id);
+    if (existing) {
+      // Interval may have changed — recalculate nextKm/nextDate from lastKm/lastDate
+      existing.partLabel   = edited.partLabel.trim();
+      existing.intervalKm  = edited.intervalKm;
+      existing.intervalDays= edited.intervalDays;
+      existing.isCustom    = edited.isCustom;
+
+      // Recalculate next due
+      if (existing.intervalKm > 0 && existing.lastKm !== null) {
+        existing.nextKm = existing.lastKm + existing.intervalKm;
+      } else if (existing.intervalKm > 0 && bike.km > 0) {
+        existing.lastKm = Math.floor(bike.km / existing.intervalKm) * existing.intervalKm;
+        existing.nextKm = existing.lastKm + existing.intervalKm;
+      }
+      if (existing.lastDate) {
+        const nd = new Date(existing.lastDate);
+        nd.setDate(nd.getDate() + existing.intervalDays);
+        existing.nextDate = nd.toISOString().split('T')[0];
+      } else {
+        const nd = new Date();
+        nd.setDate(nd.getDate() + existing.intervalDays);
+        existing.nextDate = nd.toISOString().split('T')[0];
+      }
+      existing.status = calcStatus(existing, bike.km);
+    } else {
+      // Newly added item — recalculate from scratch
+      const kmInt = edited.intervalKm || 0;
+      const dayInt = edited.intervalDays || 365;
+      let lastKm = null, nextKm = null;
+      if (kmInt > 0 && bike.km > 0) {
+        lastKm = Math.floor(bike.km / kmInt) * kmInt;
+        nextKm = lastKm + kmInt;
+      }
+      const nd = new Date();
+      nd.setDate(nd.getDate() + dayInt);
+      const newItem = {
+        id:           edited.id,
+        bikeId:       _eiBikeId,
+        partType:     edited.partType,
+        partLabel:    edited.partLabel.trim(),
+        intervalKm:   kmInt,
+        intervalDays: dayInt,
+        lastKm,
+        lastDate:     null,
+        nextKm,
+        nextDate:     nd.toISOString().split('T')[0],
+        note:         '',
+        isCustom:     true,
+      };
+      newItem.status = calcStatus(newItem, bike.km);
+      APP.items.push(newItem);
+    }
+  });
+
+  // Remove any items that were deleted in the editor
+  const keptIds = new Set(_eiItems.map(i => i.id));
+  APP.items = APP.items.filter(i => i.bikeId !== _eiBikeId || keptIds.has(i.id));
+
+  closeModal('editInterval');
+  showToast('✓ Service intervals updated!');
+  renderAll();
 }
 
 // ─── RENDER ALL ──────────────────────────────────────────────────────────────
