@@ -519,6 +519,22 @@ select.form-input option{background:var(--s3)}
   #type-grid { grid-template-columns: 1fr 1fr !important; }
 }
 
+/* ── Custom interval row in add-bike step 3 ── */
+.ci-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);transition:background .12s}
+.ci-row:last-child{border-bottom:none}
+.ci-row.disabled{opacity:.4}
+.ci-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.ci-name{font-size:13px;font-weight:500;color:var(--text);flex:1;min-width:80px}
+.ci-input{width:64px;background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:12px;color:var(--text);font-family:'JetBrains Mono',monospace;outline:none;text-align:right}
+.ci-input:focus{border-color:var(--brand)}
+.ci-unit{font-size:10px;color:var(--text3);flex-shrink:0;width:26px}
+.ci-toggle{width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;background:var(--s5);position:relative;transition:background .2s;flex-shrink:0}
+.ci-toggle.on{background:var(--brand)}
+.ci-toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .18s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.ci-toggle.on::after{transform:translateX(14px)}
+.ci-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;border-radius:4px;flex-shrink:0;line-height:1}
+.ci-del:hover{color:var(--red)}
+
 </style>
 </head>
 <body data-theme="dark">
@@ -915,36 +931,39 @@ select.form-input option{background:var(--s3)}
 </div>
 
 <div class="modal-overlay" id="modal-addBike">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-header"><div class="modal-title">🏍️ Add Motorcycle</div><div class="modal-close" onclick="closeModal('addBike')">✕</div></div>
-
-    <!-- Step indicator -->
-    <div style="display:flex;gap:6px;margin-bottom:20px">
-      <div id="add-step-dot-1" style="flex:1;height:3px;border-radius:2px;background:var(--brand);transition:background .2s"></div>
-      <div id="add-step-dot-2" style="flex:1;height:3px;border-radius:2px;background:var(--s5);transition:background .2s"></div>
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">🏍️ Add Motorcycle</div>
+      <div class="modal-close" onclick="closeModal('addBike')">✕</div>
+    </div>
+    <!-- 3-step progress bar -->
+    <div style="display:flex;gap:5px;margin-bottom:18px">
+      <div id="add-step-dot-1" style="flex:1;height:3px;border-radius:2px;background:var(--brand);transition:background .25s"></div>
+      <div id="add-step-dot-2" style="flex:1;height:3px;border-radius:2px;background:var(--s5);transition:background .25s"></div>
+      <div id="add-step-dot-3" style="flex:1;height:3px;border-radius:2px;background:var(--s5);transition:background .25s"></div>
     </div>
 
-    <!-- Step 1: Bike Type -->
+    <!-- ── Step 1: Type selection ── -->
     <div id="add-step-1">
       <div style="margin-bottom:14px">
-        <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 1 of 2 — Select Motorcycle Type</div>
-        <div style="font-size:12px;color:var(--text3)">Maintenance intervals are tailored to your bike category based on typical manufacturer guidelines.</div>
+        <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 1 of 3 — Select Motorcycle Type</div>
+        <div style="font-size:12px;color:var(--text3)">Maintenance intervals are tailored to your bike category. You can customise them in Step 3.</div>
       </div>
-      <div id="type-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px"></div>
-      <div style="padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.5;color:var(--text3);background:var(--s3);border:1px solid var(--border)">
-        ⚠️ <strong style="color:var(--text2)">Note:</strong> Intervals are general guidelines based on typical manufacturer data. Always refer to your motorcycle's owner manual for the exact schedule.
+      <div id="type-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"></div>
+      <div style="padding:9px 12px;border-radius:8px;font-size:11px;line-height:1.5;color:var(--text3);background:var(--s3);border:1px solid var(--border)">
+        ⚠️ <strong style="color:var(--text2)">Note:</strong> Always verify intervals with your motorcycle's owner manual.
       </div>
-      <div style="display:flex;gap:10px;margin-top:16px">
+      <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn btn-secondary" style="flex:1" onclick="closeModal('addBike')">Cancel</button>
-        <button class="btn btn-primary" style="flex:1;opacity:.5;pointer-events:none" id="type-next-btn" onclick="addBikeStep2()">Next →</button>
+        <button id="type-next-btn" class="btn btn-primary" style="flex:1;opacity:.5;pointer-events:none" onclick="addBikeStep2()">Next →</button>
       </div>
     </div>
 
-    <!-- Step 2: Bike Details -->
+    <!-- ── Step 2: Bike Details ── -->
     <div id="add-step-2" style="display:none">
       <div style="margin-bottom:14px">
-        <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 2 of 2 — Bike Details</div>
-        <div id="selected-type-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-family:'Exo 2',sans-serif;font-weight:700;background:var(--glow);color:var(--brand);border:1px solid rgba(249,115,22,0.25);margin-top:4px"></div>
+        <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 2 of 3 — Bike Details</div>
+        <div id="selected-type-badge" style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-family:'Exo 2',sans-serif;font-weight:700;background:var(--glow);color:var(--brand);border:1px solid rgba(249,115,22,0.25);margin-top:4px"></div>
       </div>
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Make *</label><input id="bike-make" type="text" class="form-input" placeholder="Honda"/></div>
@@ -955,13 +974,23 @@ select.form-input option{background:var(--s3)}
         <div class="form-group"><label class="form-label">Color</label><input id="bike-color" type="text" class="form-input" placeholder="Candy Red"/></div>
         <div class="form-group full"><label class="form-label">VIN (optional)</label><input id="bike-vin" type="text" class="form-input" placeholder="JKAZX4R13MA000001"/></div>
       </div>
-      <div id="type-preview-box" style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--s3);border:1px solid var(--border)">
-        <div style="font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px">Maintenance items that will be seeded</div>
-        <div id="type-preview-items" style="display:flex;flex-wrap:wrap;gap:5px"></div>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:16px">
+      <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn btn-secondary" style="flex:1" onclick="addBikeStep1()">← Back</button>
-        <button class="btn btn-primary" style="flex:1" onclick="submitAddBike()">Add Motorcycle</button>
+        <button class="btn btn-primary" style="flex:1" onclick="addBikeStep3()">Next →</button>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Customise Intervals ── -->
+    <div id="add-step-3" style="display:none">
+      <div style="margin-bottom:12px">
+        <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 3 of 3 — Customise Service Intervals</div>
+        <div style="font-size:12px;color:var(--text3)">These intervals apply only to this bike. Toggle items off to skip them. Changes here do not affect the default templates.</div>
+      </div>
+      <div id="custom-intervals-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:10px"></div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:12px" onclick="addCustomIntervalRow()">＋ Add Custom Item</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="addBikeStep2Back()">← Back</button>
+        <button class="btn btn-primary" style="flex:1" onclick="submitAddBike()">✓ Add Motorcycle</button>
       </div>
     </div>
   </div>
@@ -1287,6 +1316,43 @@ const APP = {
 };
 
 let selectedBikeType   = null;
+
+// ─── LOCAL PERSISTENCE ───────────────────────────────────────────────────────
+const STORAGE_KEY = 'motomaintain_v1';
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      bikes:    APP.bikes,
+      items:    APP.items,
+      history:  APP.history,
+      nextId:   APP.nextId,
+      profile:  APP.profile,
+      theme:    currentTheme,
+      currency: currentCurrency,
+    }));
+  } catch(e) { console.warn('MotoMaintain: save failed', e); }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (Array.isArray(d.bikes))   APP.bikes   = d.bikes;
+    if (Array.isArray(d.items))   APP.items   = d.items;
+    if (Array.isArray(d.history)) APP.history = d.history;
+    if (d.nextId)                 APP.nextId  = d.nextId;
+    if (d.profile)                APP.profile = d.profile;
+    if (d.theme)    { currentTheme    = d.theme;    document.body.setAttribute('data-theme', d.theme); }
+    if (d.currency) { currentCurrency = d.currency; }
+    return true;
+  } catch(e) { console.warn('MotoMaintain: load failed', e); return false; }
+}
+
+function clearState() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+}
 let activeTemplateType = 'naked';
 let currentTheme       = 'dark';
 let currentCurrency    = 'SGD';
@@ -1337,6 +1403,27 @@ function estimateItemsForBike(bike, typeKey) {
 }
 
 // ─── ADD BIKE ────────────────────────────────────────────────────────────────
+function buildItemsFromPending(bike, pendingItems) {
+  return pendingItems.map(pi => {
+    const kmInt = pi.km || 0, dayInt = pi.days || 365;
+    let lastKm = null, nextKm = null;
+    if (kmInt > 0 && bike.km > 0) {
+      lastKm = Math.floor(bike.km / kmInt) * kmInt;
+      nextKm = lastKm + kmInt;
+    }
+    const nd = new Date();
+    nd.setDate(nd.getDate() + dayInt);
+    const item = {
+      id: uid(), bikeId: bike.id, partType: pi.type, partLabel: pi.label,
+      intervalKm: kmInt, intervalDays: dayInt,
+      lastKm, lastDate: null, nextKm, nextDate: nd.toISOString().split('T')[0],
+      note: pi.note || '',
+    };
+    item.status = calcStatus(item, bike.km);
+    return item;
+  });
+}
+
 function submitAddBike() {
   if (!selectedBikeType) { showToast('⚠️ Please select a bike type first'); return; }
   const g = (id) => document.getElementById(id)?.value?.trim() ?? '';
@@ -1356,7 +1443,10 @@ function submitAddBike() {
     addedAt: new Date().toISOString(),
   };
   APP.bikes.push(bike);
-  const newItems = estimateItemsForBike(bike, selectedBikeType);
+  const enabledPending = _pendingItems.filter(pi => pi.enabled && pi.label.trim());
+  const newItems = enabledPending.length > 0
+    ? buildItemsFromPending(bike, enabledPending)
+    : estimateItemsForBike(bike, selectedBikeType);
   APP.items.push(...newItems);
   // Capture values before resetting state
   const itemCount = newItems.length;
@@ -1366,6 +1456,7 @@ function submitAddBike() {
     addBikeStep1();
     document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
     selectedBikeType = null;
+    _pendingItems    = [];
     ['bike-make','bike-model','bike-year','bike-km','bike-nick','bike-color','bike-vin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
@@ -1949,6 +2040,7 @@ function renderAll() {
   renderHistory();
   renderOverview();
   if (typeof renderTypeSwitcher === 'function') renderTypeSwitcher();
+  saveState(); // persist after every data change
 }
 
 // ─── NAV + STATE ─────────────────────────────────────────────────────────────
@@ -1990,6 +2082,7 @@ function setTheme(theme) {
   document.body.setAttribute('data-theme', theme);
   currentTheme = theme;
   ['dark','mid','light'].forEach(t => document.getElementById('theme-'+t)?.classList.toggle('selected', t===theme));
+  saveState();
   showToast('🎨 '+theme.charAt(0).toUpperCase()+theme.slice(1)+' theme applied');
 }
 
@@ -1999,6 +2092,7 @@ function setCurrency(code, btn) {
   if (btn) btn.classList.add('selected');
   const sym = CURRENCY_SYMBOLS[code] || code;
   document.querySelectorAll('.currency-display').forEach(el => el.textContent = sym);
+  saveState();
   showToast('💱 Currency set to '+code);
   renderHistory(); renderOverview();
 }
@@ -2012,6 +2106,7 @@ function overviewTab(tab, el) {
 }
 
 // ─── ADD BIKE MODAL ────────────────────────────────────────────────────────────
+let _pendingItems = [];
 
 function initAddBikeModal() {
   const grid = document.getElementById('type-grid');
@@ -2026,7 +2121,7 @@ function initAddBikeModal() {
       card.classList.add('selected');
       selectedBikeType = key;
       const nb = document.getElementById('type-next-btn');
-      if (nb) { nb.style.opacity='1'; nb.style.pointerEvents=''; }
+      if (nb) { nb.style.opacity = '1'; nb.style.pointerEvents = ''; }
     };
     grid.appendChild(card);
   });
@@ -2034,28 +2129,91 @@ function initAddBikeModal() {
 
 function addBikeStep2() {
   if (!selectedBikeType) return;
-  document.getElementById('add-step-1').style.display='none';
-  document.getElementById('add-step-2').style.display='';
-  document.getElementById('add-step-dot-2').style.background='var(--brand)';
+  document.getElementById('add-step-1').style.display = 'none';
+  document.getElementById('add-step-2').style.display = '';
+  document.getElementById('add-step-dot-2').style.background = 'var(--brand)';
   const t = BIKE_TYPES[selectedBikeType];
   const badge2 = document.getElementById('selected-type-badge');
-  if (badge2) badge2.innerHTML = t.icon+' '+t.label;
-  const previewEl = document.getElementById('type-preview-items');
-  if (previewEl) {
-    previewEl.innerHTML='';
-    t.items.forEach(item => {
-      const pill=document.createElement('div');
-      pill.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:11px;background:var(--s4);color:var(--text2);border:1px solid var(--border)';
-      pill.textContent=item.n;
-      previewEl.appendChild(pill);
-    });
-  }
+  if (badge2) badge2.innerHTML = t.icon + ' ' + t.label;
 }
 
 function addBikeStep1() {
-  document.getElementById('add-step-1').style.display='';
-  document.getElementById('add-step-2').style.display='none';
-  document.getElementById('add-step-dot-2').style.background='var(--s5)';
+  document.getElementById('add-step-1').style.display = '';
+  document.getElementById('add-step-2').style.display = 'none';
+  const s3 = document.getElementById('add-step-3');
+  if (s3) s3.style.display = 'none';
+  document.getElementById('add-step-dot-2').style.background = 'var(--s5)';
+  const dot3 = document.getElementById('add-step-dot-3');
+  if (dot3) dot3.style.background = 'var(--s5)';
+}
+
+function addBikeStep3() {
+  const g = id => document.getElementById(id)?.value?.trim() ?? '';
+  if (!g('bike-make'))  { showToast('⚠️ Enter the bike make');  return; }
+  if (!g('bike-model')) { showToast('⚠️ Enter the bike model'); return; }
+  if (!g('bike-year'))  { showToast('⚠️ Enter the year');       return; }
+  if (g('bike-km') === '') { showToast('⚠️ Enter current odometer (0 if new)'); return; }
+  document.getElementById('add-step-2').style.display = 'none';
+  document.getElementById('add-step-3').style.display = '';
+  const dot3 = document.getElementById('add-step-dot-3');
+  if (dot3) dot3.style.background = 'var(--brand)';
+  const typeDef = BIKE_TYPES[selectedBikeType];
+  _pendingItems = (typeDef ? typeDef.items : []).map((t, idx) => ({
+    _id: 'pi_' + idx, icon: t.i || '🔧', label: t.n,
+    type: t.partType || ('custom_' + idx),
+    km: t.km || 0, days: t.days || 365,
+    note: t.note || '', enabled: true, isCustom: false,
+  }));
+  renderPendingItems();
+}
+
+function addBikeStep2Back() {
+  document.getElementById('add-step-3').style.display = 'none';
+  document.getElementById('add-step-2').style.display = '';
+  const dot3 = document.getElementById('add-step-dot-3');
+  if (dot3) dot3.style.background = 'var(--s5)';
+}
+
+function renderPendingItems() {
+  const list = document.getElementById('custom-intervals-list');
+  if (!list) return;
+  list.innerHTML = '';
+  _pendingItems.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'ci-row' + (item.enabled ? '' : ' disabled');
+    const namePart = item.isCustom
+      ? '<input class="form-input ci-name" style="flex:1;padding:4px 6px;font-size:12px" value="' + item.label.replace(/"/g,'&quot;') + '" placeholder="Part name" oninput="_pendingItems[' + idx + '].label=this.value"/>'
+      : '<span class="ci-name">' + item.label + '</span>';
+    row.innerHTML = '<span class="ci-icon">' + item.icon + '</span>' + namePart +
+      '<input class="ci-input" type="number" min="0" step="500" value="' + item.km + '" title="km interval" oninput="_pendingItems[' + idx + '].km=parseInt(this.value)||0"/>' +
+      '<span class="ci-unit">km</span>' +
+      '<input class="ci-input" type="number" min="1" step="1" value="' + item.days + '" title="day interval" oninput="_pendingItems[' + idx + '].days=parseInt(this.value)||1"/>' +
+      '<span class="ci-unit">days</span>' +
+      '<button class="ci-toggle' + (item.enabled ? ' on' : '') + '" title="' + (item.enabled ? 'Enabled' : 'Disabled') + '" onclick="togglePendingItem(' + idx + ')"></button>' +
+      (item.isCustom ? '<button class="ci-del" onclick="deletePendingItem(' + idx + ')" title="Remove row">✕</button>' : '<span style="width:22px"></span>');
+    list.appendChild(row);
+  });
+}
+
+function togglePendingItem(idx) {
+  _pendingItems[idx].enabled = !_pendingItems[idx].enabled;
+  renderPendingItems();
+}
+
+function deletePendingItem(idx) {
+  _pendingItems.splice(idx, 1);
+  renderPendingItems();
+}
+
+function addCustomIntervalRow() {
+  _pendingItems.push({
+    _id: 'ci_' + Date.now(), icon: '🔧', label: '',
+    type: 'custom_' + Date.now(), km: 5000, days: 365,
+    note: '', enabled: true, isCustom: true,
+  });
+  renderPendingItems();
+  const list = document.getElementById('custom-intervals-list');
+  if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
 }
 
 // ─── TEMPLATES (Overview tab) ─────────────────────────────────────────────────
@@ -2155,10 +2313,16 @@ function signOut() {
   APP.items   = [];
   APP.history = [];
   APP.nextId  = 1;
+  APP.profile = { name: 'Rider', email: '' };
+  clearState();
+  currentTheme = 'dark';
+  currentCurrency = 'SGD';
+  document.body.setAttribute('data-theme', 'dark');
+  updateNameEverywhere('Rider');
   renderAll();
   nav('dashboard', null);
   setActiveNav('dashboard');
-  showToast('👋 Signed out. Data cleared.');
+  showToast('👋 Signed out. All local data cleared.');
 }
 
 function saveProfile() {
@@ -2171,20 +2335,42 @@ function saveProfile() {
   APP.profile.name  = name;
   APP.profile.email = email;
   updateNameEverywhere(name);
+  saveState();
   showToast('✓ Profile saved!');
 }
 
 (function init() {
+  // Load persisted state (bikes, settings, theme, currency)
+  const hasData = loadState();
+
+  // Apply theme and currency from loaded state
+  document.body.setAttribute('data-theme', currentTheme);
+  ['dark','mid','light'].forEach(t => {
+    document.getElementById('theme-'+t)?.classList.toggle('selected', t === currentTheme);
+  });
+  const sym = { SGD:'S$', MYR:'RM', USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'A$', IDR:'Rp' }[currentCurrency] || currentCurrency;
+  document.querySelectorAll('.currency-display').forEach(el => el.textContent = sym);
+  document.querySelectorAll('.currency-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.code === currentCurrency);
+  });
+
+  // Fill profile fields in Settings page
+  const pn = document.getElementById('profile-name');
+  const pe = document.getElementById('profile-email');
+  if (pn) pn.value = APP.profile.name;
+  if (pe) pe.value = APP.profile.email;
+
   // Set today's date on dashboard
   const dateEl = document.getElementById('dash-date');
   if (dateEl) {
-    const now = new Date();
-    dateEl.textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
-  // Apply saved profile name to all name displays
+
+  // Apply profile name everywhere
   updateNameEverywhere(APP.profile.name);
   const greetEl = document.getElementById('dash-greeting');
   if (greetEl) greetEl.textContent = 'Welcome back, ' + APP.profile.name.split(' ')[0];
+
   renderAll();
   renderTemplates('naked');
   renderTypeSwitcher();
