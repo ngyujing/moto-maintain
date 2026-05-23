@@ -884,7 +884,7 @@ select.form-input option{background:var(--s3)}
       </div>
       <div style="margin-top:16px;display:flex;gap:10px">
         <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
-        <button class="btn btn-danger" onclick="showToast('👋 Signed out!')">Sign Out</button>
+        <button class="btn btn-danger" onclick="signOut()">Sign Out</button>
       </div>
     </div>
   </div>
@@ -936,7 +936,7 @@ select.form-input option{background:var(--s3)}
       </div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn btn-secondary" style="flex:1" onclick="closeModal('addBike')">Cancel</button>
-        <button class="btn btn-primary" style="flex:1" id="type-next-btn" onclick="addBikeStep2()" disabled style="opacity:.5">Next →</button>
+        <button class="btn btn-primary" style="flex:1;opacity:.5;pointer-events:none" id="type-next-btn" onclick="addBikeStep2()">Next →</button>
       </div>
     </div>
 
@@ -1250,11 +1250,7 @@ function renderTypeSwitcher() {
   if (tplCard) container.insertBefore(switcher, tplCard);
 }
 
-// Initial render on page load
-(function() {
-  const tplEl2 = document.getElementById('templates-list');
-  if (tplEl2) { renderTemplates('naked'); renderTypeSwitcher(); }
-})();
+// renderTemplates called in init() below
 
 function tplEdit(idx) {
   const row = document.querySelector('.tpl-row[data-idx="'+idx+'"]');
@@ -1290,6 +1286,12 @@ const APP = {
   profile: { name: 'Ahmad Razif', email: 'ahmad@example.com' },
 };
 
+let selectedBikeType   = null;
+let activeTemplateType = 'naked';
+let currentTheme       = 'dark';
+let currentCurrency    = 'SGD';
+const CURRENCY_SYMBOLS = { SGD:'S$', MYR:'RM', USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'A$', IDR:'Rp' };
+
 function uid() { return 'id_' + (APP.nextId++); }
 
 // ─── MAINTENANCE CALC ────────────────────────────────────────────────────────
@@ -1299,7 +1301,7 @@ function calcNextDue(lastKm, intervalKm, currentKm) {
 }
 
 function calcStatus(item, currentKm) {
-  if (!item.lastKm && !item.lastDate) return 'never_serviced';
+  if (item.lastKm === null && item.lastDate === null) return 'never_serviced';
   const now = Date.now();
   const kmOver   = item.nextKm   && currentKm >= item.nextKm;
   const dateOver = item.nextDate && now >= new Date(item.nextDate).getTime();
@@ -1356,6 +1358,9 @@ function submitAddBike() {
   APP.bikes.push(bike);
   const newItems = estimateItemsForBike(bike, selectedBikeType);
   APP.items.push(...newItems);
+  // Capture values before resetting state
+  const itemCount = newItems.length;
+  const toastMsg  = `🏍️ ${make} ${model} added! ${itemCount} service items created.`;
   closeModal('addBike');
   setTimeout(() => {
     addBikeStep1();
@@ -1365,10 +1370,9 @@ function submitAddBike() {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     const nb = document.getElementById('type-next-btn');
-    if (nb) { nb.disabled = true; nb.style.opacity = '.5'; }
+    if (nb) { nb.style.opacity = '.5'; nb.style.pointerEvents = 'none'; }
   }, 300);
-  const t = BIKE_TYPES[selectedBikeType];
-  showToast(`🏍️ ${make} ${model} added! ${newItems.length} service items created.`);
+  showToast(toastMsg);
   renderAll();
   nav('bikes', null); setActiveNav('bikes');
 }
@@ -1400,6 +1404,8 @@ function doCompleteService() {
   const date  = m.querySelector('.complete-date-input').value;
   const cost  = parseFloat(m.querySelector('.complete-cost-input').value) || 0;
   const notes = m.querySelector('.complete-notes-input').value;
+  if (!date) { showToast('⚠️ Please enter the service date'); return; }
+  if (km <= 0 && item.intervalKm > 0) { showToast('⚠️ Please enter the mileage at service'); return; }
   // Update bike odometer if higher
   const bike = APP.bikes.find(b => b.id === item.bikeId);
   if (bike && km > bike.km) bike.km = km;
@@ -1442,7 +1448,8 @@ function doUpdateOdometer() {
   if (!bike) return;
   const m = document.getElementById('modal-odometer');
   const newKm = parseInt(m.querySelector('.odo-km-input').value);
-  if (!newKm || newKm < bike.km) { showToast('⚠️ Enter a km value higher than current'); return; }
+  if (isNaN(newKm)) { showToast('⚠️ Enter a valid km number'); return; }
+  if (newKm <= bike.km) { showToast('⚠️ New km must be higher than current (' + bike.km.toLocaleString() + ' km)'); return; }
   bike.km = newKm;
   // Recalculate all item statuses for this bike
   APP.items.filter(i => i.bikeId === bike.id).forEach(i => { i.status = calcStatus(i, newKm); });
@@ -1836,7 +1843,9 @@ function renderHistory() {
       <div class="tl-card">
         <div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>
         <span class="tl-part">${h.partLabel}${bike ? ' — '+bike.make+' '+bike.model : ''}</span>
-        <span class="tl-date">${fmtDate(h.date)}</span></div>
+        <span class="tl-date">${fmtDate(h.date)}</span>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0"
+          onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div>
         <div class="tl-details">
           <span>📍 ${fmtKm(h.km)}</span>
           ${h.cost > 0 ? `<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>` : ''}
@@ -1845,6 +1854,15 @@ function renderHistory() {
       </div>
     </div>`;
   }).join('')}</div>`;
+}
+
+function deleteServiceRecord(recordId) {
+  if (!confirm('Delete this service record?')) return;
+  APP.history = APP.history.filter(h => h.id !== recordId);
+  renderHistory();
+  renderOverview();
+  renderDashboard();
+  showToast('🗑 Service record deleted');
 }
 
 // ─── RENDER OVERVIEW ─────────────────────────────────────────────────────────
@@ -1934,10 +1952,6 @@ function renderAll() {
 }
 
 // ─── NAV + STATE ─────────────────────────────────────────────────────────────
-let currentTheme    = 'dark';
-let currentCurrency = 'SGD';
-const CURRENCY_SYMBOLS = { SGD:'S$',MYR:'RM',USD:'$',EUR:'€',GBP:'£',JPY:'¥',AUD:'A$',IDR:'Rp' };
-
 function nav(page, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
@@ -1997,8 +2011,7 @@ function overviewTab(tab, el) {
   renderOverview();
 }
 
-// ─── ADD BIKE MODAL ───────────────────────────────────────────────────────────
-let selectedBikeType = null;
+// ─── ADD BIKE MODAL ────────────────────────────────────────────────────────────
 
 function initAddBikeModal() {
   const grid = document.getElementById('type-grid');
@@ -2013,7 +2026,7 @@ function initAddBikeModal() {
       card.classList.add('selected');
       selectedBikeType = key;
       const nb = document.getElementById('type-next-btn');
-      if (nb) { nb.disabled=false; nb.style.opacity='1'; }
+      if (nb) { nb.style.opacity='1'; nb.style.pointerEvents=''; }
     };
     grid.appendChild(card);
   });
@@ -2046,8 +2059,6 @@ function addBikeStep1() {
 }
 
 // ─── TEMPLATES (Overview tab) ─────────────────────────────────────────────────
-let activeTemplateType = 'naked';
-
 function renderTemplates(typeKey) {
   activeTemplateType = typeKey;
   const tplEl = document.getElementById('templates-list');
@@ -2136,6 +2147,18 @@ function updateNameEverywhere(name) {
 function previewNameChange(val) {
   // Live preview as user types
   if (val.trim()) updateNameEverywhere(val.trim());
+}
+
+function signOut() {
+  if (!confirm('Sign out? All unsaved data will be lost.')) return;
+  APP.bikes   = [];
+  APP.items   = [];
+  APP.history = [];
+  APP.nextId  = 1;
+  renderAll();
+  nav('dashboard', null);
+  setActiveNav('dashboard');
+  showToast('👋 Signed out. Data cleared.');
 }
 
 function saveProfile() {
