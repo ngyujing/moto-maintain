@@ -525,8 +525,35 @@ select.form-input option{background:var(--s3)}
 <!-- MOBILE TOP BAR -->
 <div id="mobile-topbar">
   <div class="topbar-logo">
-    <div class="topbar-logo-icon">🏍️</div>
-    <div class="topbar-title">MotoMaintain</div>
+    <svg xmlns="http://www.w3.org/2000/svg" width="140" height="35" viewBox="0 0 320 72" role="img" aria-label="MotoMaintain logo">
+  <title>MotoMaintain</title>
+  <!-- Icon mark background -->
+  <rect x="0" y="4" width="64" height="64" rx="10" fill="#131720"/>
+  <rect x="0" y="4" width="64" height="64" rx="10" fill="none" stroke="#f97316" stroke-width="1.2" opacity="0.5"/>
+  <!-- Wrench ring -->
+  <circle cx="32" cy="28" r="13" fill="none" stroke="#f97316" stroke-width="5.5"/>
+  <circle cx="32" cy="28" r="6" fill="#131720"/>
+  <!-- Spokes -->
+  <line x1="32" y1="15" x2="32" y2="22" stroke="#f97316" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="43.3" y1="21.5" x2="38.5" y2="24.7" stroke="#f97316" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="20.7" y1="21.5" x2="25.5" y2="24.7" stroke="#f97316" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Wrench handle -->
+  <rect x="28.5" y="39" width="7" height="22" rx="3.5" fill="#f97316"/>
+  <!-- Speed arc above wrench -->
+  <path d="M14,26 A18,18 0 0,1 50,26" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+  <!-- Needle -->
+  <line x1="32" y1="26" x2="44" y2="15" stroke="#f97316" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+  <!-- Dot accent -->
+  <circle cx="55" cy="60" r="3.5" fill="#f97316"/>
+  <!-- Wordmark: Moto (light) -->
+  <text x="80" y="34" font-family="'Exo 2',sans-serif" font-weight="800" font-size="26" fill="#f1f5f9" letter-spacing="-0.5">Moto</text>
+  <!-- Wordmark: Maintain (orange) -->
+  <text x="80" y="60" font-family="'Exo 2',sans-serif" font-weight="800" font-size="26" fill="#f97316" letter-spacing="-0.5">Maintain</text>
+  <!-- Accent bar -->
+  <rect x="75" y="37" width="2.5" height="18" rx="1.2" fill="#f97316" opacity="0.45"/>
+  <!-- Tagline -->
+  <text x="82" y="72" font-family="'Exo 2',sans-serif" font-weight="600" font-size="8" fill="#475569" letter-spacing="0.16em">SERVICE TRACKER</text>
+</svg>
   </div>
   <div class="topbar-right">
     <div class="topbar-btn" onclick="nav('settings', null); setActiveNav('settings')" title="Settings">⚙️</div>
@@ -536,12 +563,36 @@ select.form-input option{background:var(--s3)}
 
 <!-- SIDEBAR -->
 <nav id="sidebar">
-  <div class="logo">
-    <div class="logo-icon">🏍️</div>
-    <div>
-      <div class="logo-text">MotoMaintain</div>
-      <div class="logo-sub">Service Tracker</div>
-    </div>
+  <div class="logo" style="padding:16px 14px 14px">
+    <svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 320 72" role="img" aria-label="MotoMaintain logo">
+  <title>MotoMaintain</title>
+  <!-- Icon mark background -->
+  <rect x="0" y="4" width="64" height="64" rx="10" fill="#131720"/>
+  <rect x="0" y="4" width="64" height="64" rx="10" fill="none" stroke="#f97316" stroke-width="1.2" opacity="0.5"/>
+  <!-- Wrench ring -->
+  <circle cx="32" cy="28" r="13" fill="none" stroke="#f97316" stroke-width="5.5"/>
+  <circle cx="32" cy="28" r="6" fill="#131720"/>
+  <!-- Spokes -->
+  <line x1="32" y1="15" x2="32" y2="22" stroke="#f97316" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="43.3" y1="21.5" x2="38.5" y2="24.7" stroke="#f97316" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="20.7" y1="21.5" x2="25.5" y2="24.7" stroke="#f97316" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Wrench handle -->
+  <rect x="28.5" y="39" width="7" height="22" rx="3.5" fill="#f97316"/>
+  <!-- Speed arc above wrench -->
+  <path d="M14,26 A18,18 0 0,1 50,26" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+  <!-- Needle -->
+  <line x1="32" y1="26" x2="44" y2="15" stroke="#f97316" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+  <!-- Dot accent -->
+  <circle cx="55" cy="60" r="3.5" fill="#f97316"/>
+  <!-- Wordmark: Moto (light) -->
+  <text x="80" y="34" font-family="'Exo 2',sans-serif" font-weight="800" font-size="26" fill="#f1f5f9" letter-spacing="-0.5">Moto</text>
+  <!-- Wordmark: Maintain (orange) -->
+  <text x="80" y="60" font-family="'Exo 2',sans-serif" font-weight="800" font-size="26" fill="#f97316" letter-spacing="-0.5">Maintain</text>
+  <!-- Accent bar -->
+  <rect x="75" y="37" width="2.5" height="18" rx="1.2" fill="#f97316" opacity="0.45"/>
+  <!-- Tagline -->
+  <text x="82" y="72" font-family="'Exo 2',sans-serif" font-weight="600" font-size="8" fill="#475569" letter-spacing="0.16em">SERVICE TRACKER</text>
+</svg>
   </div>
   <div class="nav-section">
     <div class="nav-label">Main</div>
