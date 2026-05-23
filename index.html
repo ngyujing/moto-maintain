@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MotoMaintain</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -625,34 +626,34 @@ select.form-input option{background:var(--s3)}
   <div class="page-header">
     <div>
       <div class="page-title">Dashboard</div>
-      <div class="page-sub">Friday, 22 May 2026 · 2 motorcycles tracked</div>
+      <div class="page-sub" id="dash-date">Loading...</div>
     </div>
     <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
   </div>
   <div class="stat-grid">
-    <div class="stat-card overdue-pulse" style="border-color:var(--red-border)">
+    <div class="stat-card" id="dash-overdue-card">
       <div class="stat-icon" style="background:var(--red-bg)">🔴</div>
       <div class="stat-label">Overdue</div>
-      <div class="stat-val" style="color:var(--red)">3</div>
+      <div class="stat-val" id="dash-overdue" style="color:var(--red)">0</div>
       <div class="stat-sub">Needs immediate attention</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon" style="background:var(--amber-bg)">🟡</div>
       <div class="stat-label">Due Soon</div>
-      <div class="stat-val" style="color:var(--amber)">4</div>
+      <div class="stat-val" id="dash-soon" style="color:var(--amber)">0</div>
       <div class="stat-sub">Within 500 km or 30 days</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon" style="background:var(--green-bg)">🟢</div>
       <div class="stat-label">Up to Date</div>
-      <div class="stat-val" style="color:var(--green)">16</div>
+      <div class="stat-val" id="dash-ok" style="color:var(--green)">0</div>
       <div class="stat-sub">All services current</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon" style="background:var(--glow)">🏍️</div>
       <div class="stat-label">Total km tracked</div>
-      <div class="stat-val" style="color:var(--brand)">48.2k</div>
-      <div class="stat-sub">Across 2 bikes</div>
+      <div class="stat-val" id="dash-km" style="color:var(--brand)">0</div>
+      <div class="stat-sub">Across all bikes</div>
     </div>
   </div>
   <div class="grid2" style="margin-bottom:24px">
@@ -668,222 +669,79 @@ select.form-input option{background:var(--s3)}
     <div class="card" style="padding:20px">
       <div class="section-hd">Fleet Health</div>
       <div class="donut-wrap" style="margin-top:10px">
-        <svg width="90" height="90" viewBox="0 0 90 90">
-          <circle cx="45" cy="45" r="36" fill="none" stroke="var(--s4)" stroke-width="10"/>
-          <circle cx="45" cy="45" r="36" fill="none" stroke="var(--green)" stroke-width="10" stroke-dasharray="141 85" stroke-dashoffset="0" stroke-linecap="round"/>
-          <circle cx="45" cy="45" r="36" fill="none" stroke="var(--amber)" stroke-width="10" stroke-dasharray="57 169" stroke-dashoffset="-141" stroke-linecap="round"/>
-          <circle cx="45" cy="45" r="36" fill="none" stroke="var(--red)" stroke-width="10" stroke-dasharray="28 198" stroke-dashoffset="-198" stroke-linecap="round"/>
-          <text x="45" y="41" text-anchor="middle" font-family="Exo 2,sans-serif" font-size="13" font-weight="800" fill="var(--text)">23</text>
-          <text x="45" y="55" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9" fill="var(--text3)">items</text>
-        </svg>
-        <div class="donut-legend">
-          <div class="legend-row"><span class="legend-dot" style="background:var(--green)"></span>Up to Date <strong style="margin-left:auto;color:var(--text)">16</strong></div>
-          <div class="legend-row"><span class="legend-dot" style="background:var(--amber)"></span>Due Soon <strong style="margin-left:auto;color:var(--text)">4</strong></div>
-          <div class="legend-row"><span class="legend-dot" style="background:var(--red)"></span>Overdue <strong style="margin-left:auto;color:var(--text)">3</strong></div>
-        </div>
+        <svg width="90" height="90" viewBox="0 0 90 90" id="dash-donut"></svg>
+        <div class="donut-legend" id="dash-donut-legend"></div>
       </div>
     </div>
   </div>
-  <div style="margin-bottom:20px">
-    <div class="section-hd" style="color:var(--red)">⚠ Overdue — Needs attention now</div>
-    <div class="card">
-      <div class="service-row" onclick="openModal('complete')">
-        <span class="svc-icon">🛢️</span>
-        <div style="flex:1"><div class="svc-name">Engine Oil</div><div class="svc-meta">Kawasaki ZX-6R · Last done @ 23,500 km</div></div>
-        <span class="badge badge-overdue">Overdue</span>
-        <div class="svc-right"><div class="km-val">Due @ 28,500 km</div><div style="font-size:10px;color:var(--red);margin-top:2px">+800 km over</div></div>
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Done</button>
-      </div>
-      <div class="service-row" onclick="openModal('complete')">
-        <span class="svc-icon">🔴</span>
-        <div style="flex:1"><div class="svc-name">Brake Pads (Front)</div><div class="svc-meta">Kawasaki ZX-6R · Last done @ 18,000 km</div></div>
-        <span class="badge badge-overdue">Overdue</span>
-        <div class="svc-right"><div class="km-val">Due @ 28,000 km</div><div style="font-size:10px;color:var(--red);margin-top:2px">+1,300 km over</div></div>
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Done</button>
-      </div>
-      <div class="service-row" onclick="openModal('complete')">
-        <span class="svc-icon">🔋</span>
-        <div style="flex:1"><div class="svc-name">Battery Check</div><div class="svc-meta">Honda CB650R · 547 days since last check</div></div>
-        <span class="badge badge-overdue">Overdue</span>
-        <div class="svc-right"><div class="km-val">Due: Jan 2025</div><div style="font-size:10px;color:var(--red);margin-top:2px">~500 days over</div></div>
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Done</button>
-      </div>
+  <div id="dash-no-bikes" style="display:none">
+    <div style="text-align:center;padding:40px 20px">
+      <div style="font-size:48px;margin-bottom:12px">🏍️</div>
+      <h3 style="margin-bottom:8px">Add your first motorcycle</h3>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:16px">Set up your bike to start tracking service intervals</p>
+      <button class="btn btn-primary" style="margin:0 auto" onclick="openModal('addBike')">＋ Add Motorcycle</button>
     </div>
   </div>
-  <div>
-    <div class="section-hd" style="color:var(--amber)">🕐 Due Soon — Service within 500 km or 30 days</div>
-    <div class="card">
-      <div class="service-row"><span class="svc-icon">🔧</span><div style="flex:1"><div class="svc-name">Oil Filter</div><div class="svc-meta">Kawasaki ZX-6R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due @ 29,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:88%;background:var(--amber)"></div></div></div></div></div>
-      <div class="service-row"><span class="svc-icon">💨</span><div style="flex:1"><div class="svc-name">Air Filter</div><div class="svc-meta">Honda CB650R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due @ 22,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:92%;background:var(--amber)"></div></div></div></div></div>
-      <div class="service-row"><span class="svc-icon">⛓️</span><div style="flex:1"><div class="svc-name">Chain & Sprockets</div><div class="svc-meta">Kawasaki ZX-6R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due @ 29,500 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:85%;background:var(--amber)"></div></div></div></div></div>
-      <div class="service-row"><span class="svc-icon">💧</span><div style="flex:1"><div class="svc-name">Brake Fluid</div><div class="svc-meta">Honda CB650R · Due in 18 days</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">9 Jun 2026</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:95%;background:var(--amber)"></div></div></div></div></div>
-    </div>
+  <div id="dash-overdue-hdr" style="margin-bottom:12px">
+    <div class="section-hd" style="color:var(--red)">⚠ Overdue — needs attention now</div>
+    <div class="card" id="dash-overdue-list"></div>
+  </div>
+  <div id="dash-soon-hdr">
+    <div class="section-hd" style="color:var(--amber)">🕐 Due Soon</div>
+    <div class="card" id="dash-soon-list"></div>
   </div>
 </div>
 
-<!-- ═══ BIKES ═══ -->
 <div id="page-bikes" class="page">
   <div class="page-header">
-    <div><div class="page-title">My Motorcycles</div><div class="page-sub">2 bikes registered</div></div>
+    <div><div class="page-title">My Motorcycles</div><div class="page-sub" id="bikes-sub">0 bikes registered</div></div>
     <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
   </div>
-  <div class="bike-grid">
-    <div class="bike-card" onclick="nav('motodetail',null)">
-      <div class="bike-top"></div>
-      <div class="bike-body">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div><div class="bike-name">Kawasaki ZX-6R</div><div class="bike-year">2021 · Lime Green · "The Beast"</div></div>
-          <span style="font-size:22px">🏍️</span>
-        </div>
-        <div class="bike-km"><span style="font-size:14px">⚡</span><span class="bike-km-val">29,300 km</span><span style="font-size:10px;color:var(--text3);margin-left:auto">odometer</span></div>
-        <div class="bike-stats">
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--red)">2</div><div class="bike-stat-lbl">Overdue</div></div>
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--amber)">2</div><div class="bike-stat-lbl">Due Soon</div></div>
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--green)">8</div><div class="bike-stat-lbl">OK</div></div>
-        </div>
-      </div>
-      <div class="bike-actions">
-        <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();nav('motodetail',null)">View Details</button>
-        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openModal('odometer')" title="Update km">⚡</button>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation()" title="Delete">🗑</button>
-      </div>
-    </div>
-    <div class="bike-card" onclick="nav('motodetail',null)">
-      <div class="bike-top" style="background:linear-gradient(90deg,#38bdf8,#6366f1)"></div>
-      <div class="bike-body">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div><div class="bike-name">Honda CB650R</div><div class="bike-year">2022 · Graphite Black · "Daily"</div></div>
-          <span style="font-size:22px">🏍️</span>
-        </div>
-        <div class="bike-km"><span style="font-size:14px">⚡</span><span class="bike-km-val">21,880 km</span><span style="font-size:10px;color:var(--text3);margin-left:auto">odometer</span></div>
-        <div class="bike-stats">
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--red)">1</div><div class="bike-stat-lbl">Overdue</div></div>
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--amber)">2</div><div class="bike-stat-lbl">Due Soon</div></div>
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--green)">8</div><div class="bike-stat-lbl">OK</div></div>
-        </div>
-      </div>
-      <div class="bike-actions">
-        <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();nav('motodetail',null)">View Details</button>
-        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openModal('odometer')" title="Update km">⚡</button>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation()" title="Delete">🗑</button>
-      </div>
-    </div>
-    <div class="bike-card" style="border-style:dashed;opacity:.5;display:flex;align-items:center;justify-content:center;min-height:220px;" onclick="openModal('addBike')">
-      <div style="text-align:center"><div style="font-size:32px;margin-bottom:8px">＋</div><div style="font-family:'Exo 2',sans-serif;font-weight:700;font-size:13px;color:var(--text3)">Add Motorcycle</div></div>
-    </div>
-  </div>
+  <div class="bike-grid" id="bike-grid"></div>
 </div>
 
-<!-- ═══ MOTO DETAIL ═══ -->
 <div id="page-motodetail" class="page">
-  <div class="page-header">
-    <div style="display:flex;align-items:center;gap:12px">
-      <button class="btn btn-ghost btn-sm" onclick="nav('bikes',null)">← Back</button>
-      <div><div class="page-title">Kawasaki ZX-6R</div><div class="page-sub">2021 · Lime Green · "The Beast"</div></div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-secondary btn-sm" onclick="openModal('odometer')">⚡ Update km</button>
-      <button class="btn btn-primary btn-sm" onclick="nav('maintenance',null)">🔧 Maintenance</button>
-    </div>
-  </div>
-  <div class="detail-split">
-    <div>
-      <div class="card" style="padding:20px;margin-bottom:16px">
-        <div class="section-hd">Bike Info</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Odometer</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--brand)">29,300 km</div></div>
-          <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Year</div><div style="font-family:'Exo 2',sans-serif;font-size:16px;font-weight:700;color:var(--text)">2021</div></div>
-          <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Color</div><div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:600;color:var(--text)">Lime Green</div></div>
-          <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">VIN</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)">JKAZX4R13MA082341</div></div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:14px">
-          <div style="flex:1;background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--red)">2</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;font-family:'Exo 2',sans-serif">Overdue</div></div>
-          <div style="flex:1;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--amber)">2</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;font-family:'Exo 2',sans-serif">Due Soon</div></div>
-          <div style="flex:1;background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--green)">8</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;font-family:'Exo 2',sans-serif">OK</div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div style="padding:14px 16px 0;display:flex;align-items:center;justify-content:space-between"><div class="section-hd" style="margin:0">Maintenance Items</div><button class="btn btn-primary btn-sm" onclick="nav('maintenance',null)">View All</button></div>
-        <div class="service-row"><span class="svc-icon">🛢️</span><div style="flex:1"><div class="svc-name">Engine Oil</div><div class="svc-meta">Every 5,000 km</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">@ 28,500 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--red)"></div></div></div></div></div>
-        <div class="service-row"><span class="svc-icon">🔴</span><div style="flex:1"><div class="svc-name">Brake Pads (Front)</div><div class="svc-meta">Every 10,000 km</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">@ 28,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--red)"></div></div></div></div></div>
-        <div class="service-row"><span class="svc-icon">🔧</span><div style="flex:1"><div class="svc-name">Oil Filter</div><div class="svc-meta">Every 5,000 km</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">@ 29,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:88%;background:var(--amber)"></div></div></div></div></div>
-        <div class="service-row"><span class="svc-icon">⚡</span><div style="flex:1"><div class="svc-name">Spark Plugs</div><div class="svc-meta">Every 12,000 km</div></div><span class="badge badge-ok">Up to Date</span><div class="svc-right"><div class="km-val">@ 36,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:52%;background:var(--green)"></div></div></div></div></div>
-      </div>
-    </div>
-    <div>
-      <div class="card" style="padding:20px">
-        <div class="section-hd">Odometer History</div>
-        <div class="timeline">
-          <div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--brand)">29,300 km</span><span class="tl-date">Today</span></div><div class="tl-details">Current reading</div></div></div>
-          <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--text)">28,100 km</span><span class="tl-date">12 May 2026</span></div><div class="tl-details">Returned from Genting trip</div></div></div>
-          <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--text)">25,400 km</span><span class="tl-date">3 Apr 2026</span></div><div class="tl-details">After engine oil service</div></div></div>
-          <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--text)">22,000 km</span><span class="tl-date">15 Jan 2026</span></div><div class="tl-details">Regular update</div></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div id="detail-content"></div>
 </div>
 
-<!-- ═══ MAINTENANCE ═══ -->
 <div id="page-maintenance" class="page">
   <div class="page-header">
-    <div><div class="page-title">Maintenance Items</div><div class="page-sub">All service items across both bikes</div></div>
+    <div><div class="page-title" id="maint-title">Maintenance</div><div class="page-sub" id="maint-sub"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-secondary btn-sm" onclick="filterMaint('all')">All</button>
-      <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border-color:var(--red-border)" onclick="filterMaint('overdue')">Overdue 3</button>
-      <button class="btn btn-sm" style="background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)" onclick="filterMaint('soon')">Due Soon 4</button>
-      <button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);border-color:var(--green-border)" onclick="filterMaint('ok')">OK 16</button>
+      <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border-color:var(--red-border)" onclick="filterMaint('overdue')">Overdue</button>
+      <button class="btn btn-sm" style="background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)" onclick="filterMaint('soon')">Due Soon</button>
+      <button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);border-color:var(--green-border)" onclick="filterMaint('ok')">OK</button>
     </div>
   </div>
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" class="search-input" placeholder='Search parts, e.g. "oil" or "brake"...' oninput="searchMaint(this.value)"/>
+    <input type="text" class="search-input" placeholder="Search parts..." oninput="searchMaint(this.value)"/>
   </div>
-  <div id="maint-list">
-    <div class="section-hd">Kawasaki ZX-6R — 29,300 km</div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="service-row maint-item" data-status="overdue"><span class="svc-icon">🛢️</span><div style="flex:1"><div class="svc-name">Engine Oil</div><div class="svc-meta">Last: 23,500 km · Every 5,000 km / 180 days</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">Due @ 28,500 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--red)"></div></div></div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="overdue"><span class="svc-icon">🔴</span><div style="flex:1"><div class="svc-name">Brake Pads (Front)</div><div class="svc-meta">Last: 18,000 km · Every 10,000 km</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">Due @ 28,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--red)"></div></div></div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="soon"><span class="svc-icon">🔧</span><div style="flex:1"><div class="svc-name">Oil Filter</div><div class="svc-meta">Last: 23,500 km · Every 5,000 km</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due @ 29,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:88%;background:var(--amber)"></div></div></div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="soon"><span class="svc-icon">⛓️</span><div style="flex:1"><div class="svc-name">Chain & Sprockets</div><div class="svc-meta">Last: 24,500 km · Every 5,000 km</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due @ 29,500 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:95%;background:var(--amber)"></div></div></div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="ok"><span class="svc-icon">⚡</span><div style="flex:1"><div class="svc-name">Spark Plugs</div><div class="svc-meta">Last: 24,000 km · Every 12,000 km</div></div><span class="badge badge-ok">Up to Date</span><div class="svc-right"><div class="km-val">Due @ 36,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:45%;background:var(--green)"></div></div></div></div></div>
-      <div class="service-row maint-item" data-status="ok"><span class="svc-icon">🌡️</span><div style="flex:1"><div class="svc-name">Coolant</div><div class="svc-meta">Last: 22,000 km · Every 20,000 km</div></div><span class="badge badge-ok">Up to Date</span><div class="svc-right"><div class="km-val">Due @ 42,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:36%;background:var(--green)"></div></div></div></div></div>
-    </div>
-    <div class="section-hd">Honda CB650R — 21,880 km</div>
-    <div class="card">
-      <div class="service-row maint-item" data-status="overdue"><span class="svc-icon">🔋</span><div style="flex:1"><div class="svc-name">Battery Check</div><div class="svc-meta">Last checked: Jun 2023 · Every 365 days</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">Due: Jan 2025</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="soon"><span class="svc-icon">💨</span><div style="flex:1"><div class="svc-name">Air Filter</div><div class="svc-meta">Last: 7,000 km · Every 15,000 km</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due @ 22,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:93%;background:var(--amber)"></div></div></div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="soon"><span class="svc-icon">💧</span><div style="flex:1"><div class="svc-name">Brake Fluid</div><div class="svc-meta">Last: 10 Jun 2024 · Every 730 days</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">Due: 9 Jun 2026</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:96%;background:var(--amber)"></div></div></div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openModal('complete')">✓ Mark Done</button></div>
-      <div class="service-row maint-item" data-status="ok"><span class="svc-icon">🛢️</span><div style="flex:1"><div class="svc-name">Engine Oil</div><div class="svc-meta">Last: 20,000 km · Every 5,000 km</div></div><span class="badge badge-ok">Up to Date</span><div class="svc-right"><div class="km-val">Due @ 25,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:38%;background:var(--green)"></div></div></div></div></div>
-      <div class="service-row maint-item" data-status="ok"><span class="svc-icon">⚫</span><div style="flex:1"><div class="svc-name">Tires</div><div class="svc-meta">Last: 16,000 km · Every 15,000 km</div></div><span class="badge badge-ok">Up to Date</span><div class="svc-right"><div class="km-val">Due @ 31,000 km</div><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:39%;background:var(--green)"></div></div></div></div></div>
-    </div>
-  </div>
+  <div id="maint-list"></div>
 </div>
+
 
 <!-- ═══ HISTORY ═══ -->
 <div id="page-history" class="page">
   <div class="page-header">
-    <div><div class="page-title">Service History</div><div class="page-sub">14 records · Total tracked spend: <span class="currency-display">SGD</span> 2,840</div></div>
-    <select class="form-input" style="width:160px;padding:8px 12px;font-size:12px"><option>All bikes</option><option>Kawasaki ZX-6R</option><option>Honda CB650R</option></select>
+    <div><div class="page-title" id="hist-title">Service History</div><div class="page-sub" id="hist-sub"></div></div>
+    <select class="form-input" style="width:160px;padding:8px 12px;font-size:12px" id="hist-bike-filter" onchange="renderHistory()">
+      <option value="all">All bikes</option>
+    </select>
   </div>
-  <div class="grid2" style="margin-bottom:24px">
-    <div class="stat-card"><div class="stat-label">Total Services</div><div class="stat-val">14</div></div>
-    <div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-val" style="color:var(--brand)"><span class="currency-display">SGD</span> 2,840</div></div>
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-label">Total Services</div><div class="stat-val" id="hist-count">0</div></div>
+    <div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-val" style="color:var(--brand)" id="hist-spend"><span class="currency-display">SGD</span> 0</div></div>
   </div>
-  <div class="timeline">
-    <div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">🛢️</span><span class="tl-part">Engine Oil — Kawasaki ZX-6R</span><span class="tl-date">3 Apr 2026</span></div><div class="tl-details"><span>📍 24,000 km</span><span>💰 <span class="currency-display">SGD</span> 120</span><span>🔧 Shell Advance AX7</span></div></div></div>
-    <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">🛢️</span><span class="tl-part">Engine Oil — Honda CB650R</span><span class="tl-date">1 Mar 2026</span></div><div class="tl-details"><span>📍 20,000 km</span><span>💰 <span class="currency-display">SGD</span> 95</span><span>🔧 Honda GN4 10W-40</span></div></div></div>
-    <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">⚡</span><span class="tl-part">Spark Plugs — Kawasaki ZX-6R</span><span class="tl-date">14 Feb 2026</span></div><div class="tl-details"><span>📍 24,000 km</span><span>💰 <span class="currency-display">SGD</span> 240</span><span>🔧 NGK Iridium (x4)</span></div></div></div>
-    <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">⛓️</span><span class="tl-part">Chain & Sprockets — Kawasaki ZX-6R</span><span class="tl-date">20 Jan 2026</span></div><div class="tl-details"><span>📍 24,500 km</span><span>💰 <span class="currency-display">SGD</span> 380</span><span>🔧 DID 520 ERT3 chain</span></div></div></div>
-    <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">⚫</span><span class="tl-part">Tires — Honda CB650R</span><span class="tl-date">5 Dec 2025</span></div><div class="tl-details"><span>📍 16,000 km</span><span>💰 <span class="currency-display">SGD</span> 680</span><span>🔧 Pirelli Rosso Sport</span></div></div></div>
-    <div class="tl-item"><div class="tl-dot" style="background:var(--s5)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">🔴</span><span class="tl-part">Brake Pads (Front) — Kawasaki ZX-6R</span><span class="tl-date">10 Nov 2025</span></div><div class="tl-details"><span>📍 18,000 km</span><span>💰 <span class="currency-display">SGD</span> 195</span><span>🔧 Brembo SA sintered</span></div></div></div>
-  </div>
+  <div id="hist-list"><div class="card p-8 text-center" style="padding:40px;text-align:center;color:var(--text3)">No service records yet. Mark a maintenance item as done to start tracking.</div></div>
 </div>
+
 
 <!-- ═══ OVERVIEW ═══ -->
 <div id="page-overview" class="page">
   <div class="page-header">
-    <div><div class="page-title">Overview</div><div class="page-sub">Fleet summary, due services, analytics & service templates</div></div>
+    <div><div class="page-title">Overview</div><div class="page-sub">Fleet summary, due services, analytics & templates</div></div>
   </div>
   <div class="tabs">
     <div class="tab active" onclick="overviewTab('summary',this)">Summary</div>
@@ -891,55 +749,9 @@ select.form-input option{background:var(--s3)}
     <div class="tab" onclick="overviewTab('analytics',this)">Analytics</div>
     <div class="tab" onclick="overviewTab('templates',this)">Templates</div>
   </div>
-
-  <!-- Summary -->
-  <div id="ov-summary">
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-icon" style="background:var(--glow)">🏍️</div><div class="stat-label">My Bikes</div><div class="stat-val" style="color:var(--brand)">2</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg)">⚠️</div><div class="stat-label">Overdue Items</div><div class="stat-val" style="color:var(--red)">3</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🕐</div><div class="stat-label">Due Soon</div><div class="stat-val" style="color:var(--amber)">4</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">✅</div><div class="stat-label">Up to Date</div><div class="stat-val" style="color:var(--green)">16</div></div>
-    </div>
-    <div class="section-hd">Recent Services</div>
-    <div class="card">
-      <div class="service-row"><span class="svc-icon">🛢️</span><div style="flex:1"><div class="svc-name">Engine Oil — Kawasaki ZX-6R</div><div class="svc-meta">3 Apr 2026</div></div><span class="badge badge-ok">Completed</span><div class="svc-right"><div class="km-val">24,000 km · <span class="currency-display">SGD</span> 120</div></div></div>
-      <div class="service-row"><span class="svc-icon">🛢️</span><div style="flex:1"><div class="svc-name">Engine Oil — Honda CB650R</div><div class="svc-meta">1 Mar 2026</div></div><span class="badge badge-ok">Completed</span><div class="svc-right"><div class="km-val">20,000 km · <span class="currency-display">SGD</span> 95</div></div></div>
-      <div class="service-row"><span class="svc-icon">⚡</span><div style="flex:1"><div class="svc-name">Spark Plugs — Kawasaki ZX-6R</div><div class="svc-meta">14 Feb 2026</div></div><span class="badge badge-ok">Completed</span><div class="svc-right"><div class="km-val">24,000 km · <span class="currency-display">SGD</span> 240</div></div></div>
-    </div>
-  </div>
-
-  <!-- Due Services -->
-  <div id="ov-due" style="display:none">
-    <div class="section-hd" style="color:var(--red)">⚠ Overdue (3 items)</div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="service-row"><span class="svc-icon">🛢️</span><div style="flex:1"><div class="svc-name">Engine Oil — Kawasaki ZX-6R</div><div class="svc-meta">+800 km over</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">@ 28,500 km</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-      <div class="service-row"><span class="svc-icon">🔴</span><div style="flex:1"><div class="svc-name">Brake Pads (Front) — ZX-6R</div><div class="svc-meta">+1,300 km over</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">@ 28,000 km</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-      <div class="service-row"><span class="svc-icon">🔋</span><div style="flex:1"><div class="svc-name">Battery Check — Honda CB650R</div><div class="svc-meta">~500 days over</div></div><span class="badge badge-overdue">Overdue</span><div class="svc-right"><div class="km-val">Due: Jan 2025</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-    </div>
-    <div class="section-hd" style="color:var(--amber)">🕐 Due Soon (4 items)</div>
-    <div class="card">
-      <div class="service-row"><span class="svc-icon">🔧</span><div style="flex:1"><div class="svc-name">Oil Filter — Kawasaki ZX-6R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">@ 29,000 km</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-      <div class="service-row"><span class="svc-icon">💨</span><div style="flex:1"><div class="svc-name">Air Filter — Honda CB650R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">@ 22,000 km</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-      <div class="service-row"><span class="svc-icon">⛓️</span><div style="flex:1"><div class="svc-name">Chain & Sprockets — ZX-6R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">@ 29,500 km</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-      <div class="service-row"><span class="svc-icon">💧</span><div style="flex:1"><div class="svc-name">Brake Fluid — Honda CB650R</div></div><span class="badge badge-soon">Due Soon</span><div class="svc-right"><div class="km-val">9 Jun 2026</div></div><button class="btn btn-primary btn-sm" onclick="openModal('complete')">Mark Done</button></div>
-    </div>
-  </div>
-
-  <!-- Analytics -->
-  <div id="ov-analytics" style="display:none">
-    <div class="grid2" style="margin-bottom:20px">
-      <div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-val">14</div></div>
-      <div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-val" style="color:var(--brand)"><span class="currency-display">SGD</span> 2,840</div></div>
-    </div>
-    <div class="section-hd">Services Per Month (last 6 months)</div>
-    <div class="card" style="padding:20px;margin-bottom:16px">
-      <div id="analytics-bars" style="display:flex;align-items:flex-end;gap:12px;height:110px"></div>
-    </div>
-    <div class="section-hd">Top Serviced Parts</div>
-    <div class="card" id="top-parts"></div>
-  </div>
-
-  <!-- Templates -->
+  <div id="ov-summary"></div>
+  <div id="ov-due" style="display:none"></div>
+  <div id="ov-analytics" style="display:none"></div>
   <div id="ov-templates" style="display:none">
     <div class="card" style="padding:12px 16px;margin-bottom:12px;background:rgba(249,115,22,0.06);border-color:rgba(249,115,22,0.2)">
       <div style="font-size:13px;color:var(--brand)">✏ Click the edit button on any row to customise intervals to your riding habits.</div>
@@ -947,6 +759,7 @@ select.form-input option{background:var(--s3)}
     <div class="card" id="templates-list"></div>
   </div>
 </div>
+
 
 <!-- ═══ SETTINGS ═══ -->
 <div id="page-settings" class="page">
@@ -1084,19 +897,19 @@ select.form-input option{background:var(--s3)}
   <div class="modal">
     <div class="modal-header"><div class="modal-title">✓ Mark Service Complete</div><div class="modal-close" onclick="closeModal('complete')">✕</div></div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s3);border-radius:8px;margin-bottom:20px;border:1px solid rgba(249,115,22,0.15)">
-      <span style="font-size:24px">🛢️</span>
-      <div><div style="font-weight:600;font-size:14px;color:var(--text)">Engine Oil</div><div style="font-size:12px;color:var(--text3)">Kawasaki ZX-6R · 2021</div></div>
+      <span style="font-size:24px">🔧</span>
+      <div><div class="complete-part-name" style="font-weight:600;font-size:14px;color:var(--text)">Service Item</div>
+      <div class="complete-bike-name" style="font-size:12px;color:var(--text3)">—</div></div>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Mileage at Service (km) *</label><input type="number" class="form-input" value="29300"/></div>
-      <div class="form-group"><label class="form-label">Service Date *</label><input type="date" class="form-input" value="2026-05-22"/></div>
-      <div class="form-group"><label class="form-label">Cost (<span class="currency-display">SGD</span>)</label><input type="number" class="form-input" placeholder="0.00" step="0.01"/></div>
-      <div class="form-group"><label class="form-label">Parts Used</label><input type="text" class="form-input" placeholder="Shell Advance AX7 1L"/></div>
-      <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-input" rows="2" placeholder="Any notes..."></textarea></div>
+      <div class="form-group"><label class="form-label">Mileage at Service (km) *</label><input type="number" class="form-input complete-km-input" placeholder="0"/></div>
+      <div class="form-group"><label class="form-label">Service Date *</label><input type="date" class="form-input complete-date-input"/></div>
+      <div class="form-group"><label class="form-label">Cost (<span class="currency-display">SGD</span>)</label><input type="number" class="form-input complete-cost-input" placeholder="0.00" step="0.01"/></div>
+      <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-input complete-notes-input" rows="2" placeholder="Parts used, work done..."></textarea></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('complete')">Cancel</button>
-      <button class="btn btn-primary" style="flex:1" onclick="closeModal('complete');showToast('✓ Engine oil service recorded!')">✓ Mark Complete</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doCompleteService()">✓ Mark Complete</button>
     </div>
   </div>
 </div>
@@ -1157,15 +970,15 @@ select.form-input option{background:var(--s3)}
 <div class="modal-overlay" id="modal-odometer">
   <div class="modal" style="max-width:380px">
     <div class="modal-header"><div class="modal-title">⚡ Update Odometer</div><div class="modal-close" onclick="closeModal('odometer')">✕</div></div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px"><strong>Kawasaki ZX-6R</strong> — current: <span style="font-family:'JetBrains Mono',monospace;color:var(--brand)">29,300 km</span></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">
+      <strong class="odo-bike-name">Motorcycle</strong> — current: <span class="odo-current-km" style="font-family:'JetBrains Mono',monospace;color:var(--brand)">0 km</span>
+    </div>
     <div class="form-grid" style="grid-template-columns:1fr">
-      <div class="form-group"><label class="form-label">New Odometer Reading (km) *</label><input type="number" class="form-input" placeholder="29400" min="29300"/></div>
-      <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" value="2026-05-22"/></div>
-      <div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" placeholder="After highway run..."/></div>
+      <div class="form-group"><label class="form-label">New Odometer Reading (km) *</label><input type="number" class="form-input odo-km-input" placeholder="0" min="0"/></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('odometer')">Cancel</button>
-      <button class="btn btn-primary" style="flex:1" onclick="closeModal('odometer');showToast('⚡ Odometer updated! Maintenance recalculated.')">Update</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doUpdateOdometer()">Update</button>
     </div>
   </div>
 </div>
@@ -1184,204 +997,6 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';                  // Database ID 
 
 // Appwrite SDK will be initialised when auth is implemented.
 // Your config above is saved and ready.
-
-// ── Add Bike Modal — Type Selection ──
-let selectedBikeType = null;
-
-function initAddBikeModal() {
-  const grid = document.getElementById('type-grid');
-  if (!grid || grid.children.length > 0) return;
-  Object.entries(BIKE_TYPES).forEach(([key, t]) => {
-    const card = document.createElement('div');
-    card.className = 'type-card';
-    card.dataset.type = key;
-    card.innerHTML = '<span class="type-card-icon">'+t.icon+'</span><div class="type-card-name">'+t.label+'</div><div class="type-card-desc">'+t.desc+'</div>';
-    card.onclick = () => {
-      document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      selectedBikeType = key;
-      const nb = document.getElementById('type-next-btn');
-      if (nb) { nb.disabled = false; nb.style.opacity = '1'; }
-    };
-    grid.appendChild(card);
-  });
-}
-
-function addBikeStep2() {
-  if (!selectedBikeType) return;
-  document.getElementById('add-step-1').style.display = 'none';
-  document.getElementById('add-step-2').style.display = '';
-  document.getElementById('add-step-dot-2').style.background = 'var(--brand)';
-  const t = BIKE_TYPES[selectedBikeType];
-  const badge = document.getElementById('selected-type-badge');
-  if (badge) badge.innerHTML = t.icon + ' ' + t.label;
-  const previewEl = document.getElementById('type-preview-items');
-  if (previewEl) {
-    previewEl.innerHTML = '';
-    t.items.forEach(item => {
-      const pill = document.createElement('div');
-      pill.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:11px;background:var(--s4);color:var(--text2);border:1px solid var(--border)';
-      pill.innerHTML = item.i + ' ' + item.n;
-      previewEl.appendChild(pill);
-    });
-  }
-}
-
-function addBikeStep1() {
-  document.getElementById('add-step-1').style.display = '';
-  document.getElementById('add-step-2').style.display = 'none';
-  document.getElementById('add-step-dot-2').style.background = 'var(--s5)';
-}
-
-function submitAddBike() {
-  const t = selectedBikeType ? BIKE_TYPES[selectedBikeType] : null;
-  closeModal('addBike');
-  setTimeout(() => {
-    addBikeStep1();
-    document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-    selectedBikeType = null;
-    const nb = document.getElementById('type-next-btn');
-    if (nb) { nb.disabled = true; nb.style.opacity = '.5'; }
-  }, 300);
-  showToast('🏍️ Bike added! Seeded ' + (t ? t.items.length : 12) + ' items for ' + (t ? t.label : 'your type'));
-}
-
-// openModal intercept removed — merged into openModal below
-
-
-// ── State ──
-let currentTheme = 'dark';
-let currentCurrency = 'SGD';
-const CURRENCY_SYMBOLS = { SGD:'S$', MYR:'RM', USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'A$', IDR:'Rp' };
-
-// ── Navigation ──
-function nav(page, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if (el) el.classList.add('active');
-  // Sync bottom nav
-  setActiveNav(page);
-  // Scroll to top
-  document.getElementById('main').scrollTop = 0;
-  window.scrollTo(0, 0);
-}
-
-function setActiveNav(page) {
-  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
-  const pageMap = { dashboard:'dashboard', bikes:'bikes', motodetail:'bikes', maintenance:'maintenance', history:'history', overview:'overview', settings:'settings' };
-  const key = pageMap[page] || page;
-  const el = document.getElementById('bnav-' + key);
-  if (el) el.classList.add('active');
-}
-
-// ── Modals ──
-function openModal(id) {
-  document.getElementById('modal-' + id).classList.add('open');
-  if (id === 'addBike') setTimeout(initAddBikeModal, 30);
-}
-function closeModal(id) { document.getElementById('modal-' + id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
-
-// ── Toast ──
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  document.getElementById('toast-msg').textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// ── Theme ──
-function setTheme(theme) {
-  document.body.setAttribute('data-theme', theme);
-  currentTheme = theme;
-  ['dark','mid','light'].forEach(t => document.getElementById('theme-'+t).classList.toggle('selected', t === theme));
-  showToast('🎨 ' + theme.charAt(0).toUpperCase() + theme.slice(1) + ' theme applied');
-}
-
-// ── Currency ──
-function setCurrency(code, btn) {
-  currentCurrency = code;
-  document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  const sym = CURRENCY_SYMBOLS[code] || code;
-  document.querySelectorAll('.currency-display').forEach(el => el.textContent = sym);
-  showToast('💱 Currency set to ' + code);
-}
-
-// ── Overview tabs ──
-function overviewTab(tab, el) {
-  ['summary','due','analytics','templates'].forEach(t => {
-    const e = document.getElementById('ov-'+t);
-    if (e) e.style.display = 'none';
-  });
-  document.getElementById('ov-'+tab).style.display = '';
-  document.querySelectorAll('#page-overview .tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-}
-
-// ── Maintenance filter/search ──
-function filterMaint(status) {
-  document.querySelectorAll('.maint-item').forEach(r => {
-    r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
-  });
-}
-function searchMaint(q) {
-  const ql = q.toLowerCase();
-  document.querySelectorAll('.maint-item').forEach(r => {
-    r.style.display = r.querySelector('.svc-name').textContent.toLowerCase().includes(ql) ? '' : 'none';
-  });
-}
-
-// ── Dashboard bar chart ──
-const chartEl = document.getElementById('chart-bars');
-if (chartEl) {
-  [{ label:'ZX-6R', o:2, s:2, k:8 }, { label:'CB650R', o:1, s:2, k:8 }].forEach(d => {
-    const max = 11, pct = h => Math.round((h/max)*90);
-    const col = document.createElement('div');
-    col.className = 'chart-col';
-    col.innerHTML = '<div class="chart-bar-wrap">' +
-      '<div class="bar" style="height:'+pct(d.o)+'px;background:var(--red);opacity:.85"></div>' +
-      '<div class="bar" style="height:'+pct(d.s)+'px;background:var(--amber);opacity:.85"></div>' +
-      '<div class="bar" style="height:'+pct(d.k)+'px;background:var(--green);opacity:.85"></div>' +
-      '</div><div class="chart-label">'+d.label+'</div>';
-    chartEl.appendChild(col);
-  });
-}
-
-// ── Analytics bars ──
-const analyticsEl = document.getElementById('analytics-bars');
-if (analyticsEl) {
-  [{ m:'Dec',c:3 },{ m:'Jan',c:5 },{ m:'Feb',c:4 },{ m:'Mar',c:7 },{ m:'Apr',c:6 },{ m:'May',c:4 }].forEach(m => {
-    const h = Math.round((m.c/7)*90);
-    const col = document.createElement('div');
-    col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:5px';
-    col.innerHTML = '<div style="font-size:10px;color:var(--brand);font-family:\'Exo 2\',sans-serif;font-weight:700">'+m.c+'</div>' +
-      '<div style="width:100%;height:'+h+'px;background:var(--brand);border-radius:4px 4px 0 0;min-height:4px;opacity:.85"></div>' +
-      '<div style="font-size:10px;color:var(--text3);font-family:\'Exo 2\',sans-serif">'+m.m+'</div>';
-    analyticsEl.appendChild(col);
-  });
-}
-
-// ── Top parts ──
-const topEl = document.getElementById('top-parts');
-if (topEl) {
-  [{ i:'🛢️',n:'Engine Oil',c:12 },{ i:'🔧',n:'Oil Filter',c:10 },{ i:'⛓️',n:'Chain & Sprockets',c:7 },{ i:'🔴',n:'Brake Pads (Front)',c:6 },{ i:'⚡',n:'Spark Plugs',c:5 }].forEach(p => {
-    const row = document.createElement('div');
-    row.className = 'service-row';
-    row.style.cursor = 'default';
-    row.innerHTML = '<span class="svc-icon">'+p.i+'</span>' +
-      '<div style="flex:1"><div class="svc-name">'+p.n+'</div>' +
-      '<div style="margin-top:5px;height:4px;background:var(--s4);border-radius:2px;overflow:hidden">' +
-      '<div style="height:100%;width:'+Math.round((p.c/12)*100)+'%;background:var(--brand);border-radius:2px"></div></div></div>' +
-      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;font-weight:500;color:var(--text2)">'+p.c+'x</div>';
-    topEl.appendChild(row);
-  });
-}
-
-// ── Templates (editable) ──
 
 // ── Bike type definitions with type-specific maintenance intervals ──
 // Sources: General guidelines derived from Honda, Kawasaki, Yamaha, Suzuki
@@ -1563,7 +1178,6 @@ const BIKE_TYPES = {
 };
 
 // Active type for templates panel (default naked for demo bikes)
-let activeTemplateType = 'naked';
 // TEMPLATES alias removed — use BIKE_TYPES[activeTemplateType].items directly
 
 // ── Render templates for a given type ──
@@ -1666,6 +1280,822 @@ function tplSave(idx) {
     ? BIKE_TYPES[activeTemplateType].items[idx].n : 'Item';
   showToast('✓ ' + itemName + ' interval updated');
 }
+
+// ─── APP STATE ────────────────────────────────────────────────────────────────
+const APP = {
+  bikes: [],
+  items: [],   // maintenance items
+  history: [], // service records
+  nextId: 1,
+};
+
+function uid() { return 'id_' + (APP.nextId++); }
+
+// ─── MAINTENANCE CALC ────────────────────────────────────────────────────────
+function calcNextDue(lastKm, intervalKm, currentKm) {
+  if (!lastKm) return Math.ceil(currentKm / intervalKm) * intervalKm + intervalKm;
+  return lastKm + intervalKm;
+}
+
+function calcStatus(item, currentKm) {
+  if (!item.lastKm && !item.lastDate) return 'never_serviced';
+  const now = Date.now();
+  const kmOver   = item.nextKm   && currentKm >= item.nextKm;
+  const dateOver = item.nextDate && now >= new Date(item.nextDate).getTime();
+  if (kmOver || dateOver) return 'overdue';
+  const kmSoon   = item.nextKm   && (item.nextKm - currentKm) <= 500;
+  const dateSoon = item.nextDate && (new Date(item.nextDate).getTime() - now) <= 30 * 86400000;
+  if (kmSoon || dateSoon) return 'due_soon';
+  return 'up_to_date';
+}
+
+function estimateItemsForBike(bike, typeKey) {
+  const typeDef = BIKE_TYPES[typeKey];
+  if (!typeDef) return [];
+  const today = new Date().toISOString().split('T')[0];
+  return typeDef.items.map(t => {
+    const kmInt  = t.km  || 0;
+    const dayInt = t.days || 365;
+    // Estimate last service as last completed interval
+    let lastKm = null, lastDate = null, nextKm = null, nextDate = null;
+    if (kmInt > 0 && bike.km > 0) {
+      lastKm = Math.floor(bike.km / kmInt) * kmInt;
+      nextKm = lastKm + kmInt;
+    }
+    const nextDateObj = new Date();
+    nextDateObj.setDate(nextDateObj.getDate() + dayInt);
+    nextDate = nextDateObj.toISOString().split('T')[0];
+    const item = { id: uid(), bikeId: bike.id, partType: t.partType || t.i, partLabel: t.n,
+      intervalKm: kmInt, intervalDays: dayInt, lastKm, lastDate,
+      nextKm, nextDate, note: t.note || '' };
+    item.status = calcStatus(item, bike.km);
+    return item;
+  });
+}
+
+// ─── ADD BIKE ────────────────────────────────────────────────────────────────
+function submitAddBike() {
+  if (!selectedBikeType) return;
+  const f = (id) => document.getElementById(id);
+  const make  = document.querySelector('#add-step-2 input[placeholder="Honda"]')?.value?.trim();
+  const model = document.querySelector('#add-step-2 input[placeholder="CB650R"]')?.value?.trim();
+  const year  = document.querySelector('#add-step-2 input[placeholder="2023"]')?.value?.trim();
+  const km    = document.querySelector('#add-step-2 input[placeholder="0"]')?.value?.trim();
+  const nick  = document.querySelector('#add-step-2 input[placeholder="My daily rider"]')?.value?.trim();
+  const color = document.querySelector('#add-step-2 input[placeholder="Candy Red"]')?.value?.trim();
+  if (!make || !model || !year || km === '') { showToast('⚠️ Fill in make, model, year & km'); return; }
+  const bike = {
+    id: uid(), make, model, year: parseInt(year), km: parseInt(km) || 0,
+    nickname: nick || '', color: color || '', bikeType: selectedBikeType,
+    addedAt: new Date().toISOString(),
+  };
+  APP.bikes.push(bike);
+  const newItems = estimateItemsForBike(bike, selectedBikeType);
+  APP.items.push(...newItems);
+  closeModal('addBike');
+  setTimeout(() => { addBikeStep1(); document.querySelectorAll('.type-card').forEach(c=>c.classList.remove('selected')); selectedBikeType=null; const nb=document.getElementById('type-next-btn'); if(nb){nb.disabled=true;nb.style.opacity='.5';} }, 300);
+  const t = BIKE_TYPES[selectedBikeType];
+  showToast(`🏍️ ${make} ${model} added! ${newItems.length} service items created.`);
+  renderAll();
+  nav('bikes', null); setActiveNav('bikes');
+}
+
+// ─── COMPLETE SERVICE ────────────────────────────────────────────────────────
+let _completeItemId = null;
+
+function openCompleteModal(itemId) {
+  _completeItemId = itemId;
+  const item = APP.items.find(i => i.id === itemId);
+  const bike = item ? APP.bikes.find(b => b.id === item.bikeId) : null;
+  if (!item || !bike) return;
+  const m = document.getElementById('modal-complete');
+  m.querySelector('.complete-part-name').textContent = item.partLabel;
+  m.querySelector('.complete-bike-name').textContent = `${bike.make} ${bike.model} ${bike.year}`;
+  m.querySelector('.complete-km-input').value = bike.km;
+  m.querySelector('.complete-date-input').value = new Date().toISOString().split('T')[0];
+  m.querySelector('.complete-cost-input').value = '';
+  m.querySelector('.complete-notes-input').value = '';
+  openModal('complete');
+}
+
+function doCompleteService() {
+  if (!_completeItemId) return;
+  const item = APP.items.find(i => i.id === _completeItemId);
+  if (!item) return;
+  const m = document.getElementById('modal-complete');
+  const km    = parseInt(m.querySelector('.complete-km-input').value) || 0;
+  const date  = m.querySelector('.complete-date-input').value;
+  const cost  = parseFloat(m.querySelector('.complete-cost-input').value) || 0;
+  const notes = m.querySelector('.complete-notes-input').value;
+  // Update bike odometer if higher
+  const bike = APP.bikes.find(b => b.id === item.bikeId);
+  if (bike && km > bike.km) bike.km = km;
+  // Update item
+  item.lastKm   = km;
+  item.lastDate = date;
+  item.nextKm   = item.intervalKm  > 0 ? km + item.intervalKm  : null;
+  const nd = new Date(date);
+  nd.setDate(nd.getDate() + item.intervalDays);
+  item.nextDate = nd.toISOString().split('T')[0];
+  item.status   = calcStatus(item, bike ? bike.km : km);
+  // Add to history
+  APP.history.push({ id: uid(), bikeId: item.bikeId, itemId: item.id,
+    partLabel: item.partLabel, partType: item.partType,
+    km, date, cost, notes, completedAt: new Date().toISOString() });
+  closeModal('complete');
+  showToast(`✓ ${item.partLabel} service recorded!`);
+  renderAll();
+}
+
+// ─── UPDATE ODOMETER ─────────────────────────────────────────────────────────
+let _odometerBikeId = null;
+
+function openOdometerModal(bikeId) {
+  _odometerBikeId = bikeId;
+  const bike = APP.bikes.find(b => b.id === bikeId);
+  if (!bike) return;
+  const m = document.getElementById('modal-odometer');
+  m.querySelector('.odo-bike-name').textContent = `${bike.make} ${bike.model}`;
+  m.querySelector('.odo-current-km').textContent = bike.km.toLocaleString() + ' km';
+  m.querySelector('.odo-km-input').value = '';
+  m.querySelector('.odo-km-input').min = bike.km;
+  m.querySelector('.odo-km-input').placeholder = bike.km + 500;
+  openModal('odometer');
+}
+
+function doUpdateOdometer() {
+  if (!_odometerBikeId) return;
+  const bike = APP.bikes.find(b => b.id === _odometerBikeId);
+  if (!bike) return;
+  const m = document.getElementById('modal-odometer');
+  const newKm = parseInt(m.querySelector('.odo-km-input').value);
+  if (!newKm || newKm < bike.km) { showToast('⚠️ Enter a km value higher than current'); return; }
+  bike.km = newKm;
+  // Recalculate all item statuses for this bike
+  APP.items.filter(i => i.bikeId === bike.id).forEach(i => { i.status = calcStatus(i, newKm); });
+  closeModal('odometer');
+  showToast(`⚡ Odometer updated to ${newKm.toLocaleString()} km`);
+  renderAll();
+}
+
+// ─── RENDER HELPERS ──────────────────────────────────────────────────────────
+const STATUS_CFG = {
+  overdue:       { cls:'badge-overdue', label:'Overdue',      bar:'var(--red)',   order:0 },
+  due_soon:      { cls:'badge-soon',    label:'Due Soon',     bar:'var(--amber)', order:1 },
+  never_serviced:{ cls:'badge-never',   label:'Never Serviced',bar:'var(--slate)',order:2 },
+  up_to_date:    { cls:'badge-ok',      label:'Up to Date',   bar:'var(--green)', order:3 },
+};
+const ICONS = { engine_oil:'🛢️',oil_filter:'🔧',air_filter:'💨',spark_plugs:'⚡',spark_plug:'⚡',
+  brake_pads_f:'🔴',brake_pads_r:'🔴',brake_fluid:'💧',chain_sprockets:'⛓️',cvt_belt:'⚙️',
+  coolant:'🌡️',tires:'⚫',battery:'🔋',fork_oil:'🛞',valve_clearance:'🔩',
+  drive_belt:'🔗',transmission_oil:'🧴',cvt_rollers:'🔘',primary_chain:'⛽' };
+function icon(partType) { return ICONS[partType] || '🔧'; }
+function fmtKm(n) { return n != null ? n.toLocaleString()+' km' : '—'; }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function badge(status) { const s=STATUS_CFG[status]||STATUS_CFG.never_serviced; return `<span class="badge ${s.cls}">${s.label}</span>`; }
+function progress(item, bikeKm) {
+  if (!item.lastKm || !item.nextKm) return '';
+  const pct = Math.min(100, Math.round(((bikeKm - item.lastKm) / (item.nextKm - item.lastKm)) * 100));
+  const col = STATUS_CFG[item.status]?.bar || 'var(--green)';
+  return `<div class="progress-bar" style="margin-top:5px"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>`;
+}
+function getCurrency() {
+  const sym = {'SGD':'S$','MYR':'RM','USD':'$','EUR':'€','GBP':'£','JPY':'¥','AUD':'A$','IDR':'Rp'};
+  return sym[currentCurrency] || currentCurrency;
+}
+
+// ─── RENDER DASHBOARD ────────────────────────────────────────────────────────
+function renderDashboard() {
+  const overdue  = APP.items.filter(i => i.status === 'overdue');
+  // Pulse overdue card if needed
+  const ovCard = document.getElementById('dash-overdue-card');
+  const dueSoon  = APP.items.filter(i => i.status === 'due_soon');
+  const ok       = APP.items.filter(i => i.status === 'up_to_date');
+  const totalKm  = APP.bikes.reduce((s,b) => s + b.km, 0);
+  // Stat cards
+  const setEl = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  if (ovCard) ovCard.classList.toggle('overdue-pulse', overdue.length > 0);
+  setEl('dash-overdue', overdue.length);
+  setEl('dash-soon',    dueSoon.length);
+  setEl('dash-ok',      ok.length);
+  setEl('dash-km',      totalKm > 1000 ? (totalKm/1000).toFixed(1)+'k' : totalKm);
+  // Badge on nav
+  const nb = document.querySelector('.nav-badge');
+  if (nb) { nb.textContent = overdue.length; nb.style.display = overdue.length ? '' : 'none'; }
+  const bnb = document.querySelector('.bnav-badge');
+  if (bnb) { bnb.textContent = overdue.length; bnb.style.display = overdue.length ? '' : 'none'; }
+  // Overdue section
+  const overdueEl = document.getElementById('dash-overdue-list');
+  const soonEl    = document.getElementById('dash-soon-list');
+  if (overdueEl) overdueEl.innerHTML = overdue.length === 0 ? '' : overdue.map(item => {
+    const bike = APP.bikes.find(b => b.id === item.bikeId);
+    return `<div class="service-row" onclick="openCompleteModal('${item.id}')">
+      <span class="svc-icon">${icon(item.partType)}</span>
+      <div style="flex:1"><div class="svc-name">${item.partLabel}</div>
+      <div class="svc-meta">${bike ? bike.make+' '+bike.model : ''} · Last: ${fmtKm(item.lastKm)}</div></div>
+      ${badge(item.status)}
+      <div class="svc-right"><div class="km-val">${item.nextKm ? 'Due @ '+fmtKm(item.nextKm) : fmtDate(item.nextDate)}</div></div>
+      <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">✓ Done</button>
+    </div>`;
+  }).join('');
+  const overdueHdr = document.getElementById('dash-overdue-hdr');
+  if (overdueHdr) overdueHdr.style.display = overdue.length ? '' : 'none';
+  if (soonEl) soonEl.innerHTML = dueSoon.length === 0 ? '' : dueSoon.map(item => {
+    const bike = APP.bikes.find(b => b.id === item.bikeId);
+    return `<div class="service-row">
+      <span class="svc-icon">${icon(item.partType)}</span>
+      <div style="flex:1"><div class="svc-name">${item.partLabel}</div>
+      <div class="svc-meta">${bike ? bike.make+' '+bike.model : ''}</div></div>
+      ${badge(item.status)}
+      <div class="svc-right">
+        <div class="km-val">${item.nextKm ? 'Due @ '+fmtKm(item.nextKm) : fmtDate(item.nextDate)}</div>
+        ${progress(item, bike ? bike.km : 0)}
+      </div>
+    </div>`;
+  }).join('');
+  const soonHdr = document.getElementById('dash-soon-hdr');
+  if (soonHdr) soonHdr.style.display = dueSoon.length ? '' : 'none';
+  // No bikes CTA
+  const noEl = document.getElementById('dash-no-bikes');
+  if (noEl) noEl.style.display = APP.bikes.length === 0 ? '' : 'none';
+  // Chart
+  renderDashChart();
+}
+
+function renderDashChart() {
+  const chartEl = document.getElementById('chart-bars');
+  if (!chartEl || APP.bikes.length === 0) { if(chartEl) chartEl.innerHTML=''; return; }
+  const maxVal = Math.max(...APP.bikes.map(b => {
+    const items = APP.items.filter(i => i.bikeId === b.id);
+    return items.length || 1;
+  }), 1);
+  chartEl.innerHTML = APP.bikes.slice(0,5).map(b => {
+    const items = APP.items.filter(i => i.bikeId === b.id);
+    const o = items.filter(i=>i.status==='overdue').length;
+    const s = items.filter(i=>i.status==='due_soon').length;
+    const k = items.filter(i=>i.status==='up_to_date').length;
+    const pct = h => Math.round((h/maxVal)*90);
+    const label = (b.nickname || b.make+' '+b.model).slice(0,10);
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap">
+        <div class="bar" style="height:${pct(o)}px;background:var(--red);opacity:.85"></div>
+        <div class="bar" style="height:${pct(s)}px;background:var(--amber);opacity:.85"></div>
+        <div class="bar" style="height:${pct(k)}px;background:var(--green);opacity:.85"></div>
+      </div>
+      <div class="chart-label">${label}</div>
+    </div>`;
+  }).join('');
+  // Donut
+  const total = APP.items.length || 1;
+  const oCount = APP.items.filter(i=>i.status==='overdue').length;
+  const sCount = APP.items.filter(i=>i.status==='due_soon').length;
+  const kCount = APP.items.filter(i=>i.status==='up_to_date').length;
+  const circ = 2 * Math.PI * 36;
+  const oArc = circ * (oCount/total);
+  const sArc = circ * (sCount/total);
+  const kArc = circ * (kCount/total);
+  const donutEl = document.getElementById('dash-donut');
+  if (donutEl) {
+    const off = -(circ * 0.25);
+    donutEl.innerHTML = `
+      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--s4)" stroke-width="10"/>
+      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--green)" stroke-width="10"
+        stroke-dasharray="${kArc} ${circ-kArc}" stroke-dashoffset="${off}" stroke-linecap="round"/>
+      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--amber)" stroke-width="10"
+        stroke-dasharray="${sArc} ${circ-sArc}" stroke-dashoffset="${off - kArc}" stroke-linecap="round"/>
+      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--red)" stroke-width="10"
+        stroke-dasharray="${oArc} ${circ-oArc}" stroke-dashoffset="${off - kArc - sArc}" stroke-linecap="round"/>
+      <text x="45" y="41" text-anchor="middle" font-family="Exo 2,sans-serif" font-size="13" font-weight="800" fill="var(--text)">${total}</text>
+      <text x="45" y="55" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9" fill="var(--text3)">items</text>`;
+    const lgEl = document.getElementById('dash-donut-legend');
+    if (lgEl) lgEl.innerHTML = [
+      ['var(--green)', 'Up to Date', kCount],
+      ['var(--amber)', 'Due Soon',   sCount],
+      ['var(--red)',   'Overdue',    oCount],
+    ].map(([col,lbl,cnt]) => `<div class="legend-row"><span class="legend-dot" style="background:${col}"></span>${lbl}<strong style="margin-left:auto;color:var(--text)">${cnt}</strong></div>`).join('');
+  }
+}
+
+// ─── RENDER BIKES ────────────────────────────────────────────────────────────
+function renderBikes() {
+  const grid = document.getElementById('bike-grid');
+  const sub  = document.getElementById('bikes-sub');
+  if (!grid) return;
+  if (sub) sub.textContent = APP.bikes.length + ' bike' + (APP.bikes.length !== 1 ? 's' : '') + ' registered';
+  if (APP.bikes.length === 0) {
+    grid.innerHTML = `<div class="bike-card" style="border-style:dashed;opacity:.5;display:flex;align-items:center;justify-content:center;min-height:220px;cursor:pointer" onclick="openModal('addBike')">
+      <div style="text-align:center"><div style="font-size:32px;margin-bottom:8px">＋</div>
+      <div style="font-family:'Exo 2',sans-serif;font-weight:700;font-size:13px;color:var(--text3)">Add Your First Motorcycle</div></div></div>`;
+    return;
+  }
+  const GRAD = { sport:'linear-gradient(90deg,#ef4444,#f97316)', naked:'linear-gradient(90deg,#f97316,#f59e0b)',
+    adventure:'linear-gradient(90deg,#22c55e,#06b6d4)', cruiser:'linear-gradient(90deg,#a855f7,#6366f1)',
+    scooter:'linear-gradient(90deg,#38bdf8,#06b6d4)', offroad:'linear-gradient(90deg,#f59e0b,#84cc16)' };
+  grid.innerHTML = APP.bikes.map(b => {
+    const items = APP.items.filter(i => i.bikeId === b.id);
+    const ov = items.filter(i=>i.status==='overdue').length;
+    const so = items.filter(i=>i.status==='due_soon').length;
+    const ok = items.filter(i=>i.status==='up_to_date'||i.status==='never_serviced').length;
+    const grad = GRAD[b.bikeType] || GRAD.naked;
+    return `<div class="bike-card">
+      <div class="bike-top" style="background:${grad}"></div>
+      <div class="bike-body" style="cursor:pointer" onclick="openBikeDetail('${b.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div class="bike-name">${b.make} ${b.model}</div>
+          <div class="bike-year">${b.year}${b.color?' · '+b.color:''}${b.nickname?' · "'+b.nickname+'"':''}</div></div>
+          <span style="font-size:22px">🏍️</span>
+        </div>
+        <div class="bike-km"><span style="font-size:14px">⚡</span>
+          <span class="bike-km-val">${b.km.toLocaleString()} km</span>
+          <span style="font-size:10px;color:var(--text3);margin-left:auto">odometer</span></div>
+        <div class="bike-stats">
+          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--red)">${ov}</div><div class="bike-stat-lbl">Overdue</div></div>
+          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--amber)">${so}</div><div class="bike-stat-lbl">Due Soon</div></div>
+          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--green)">${ok}</div><div class="bike-stat-lbl">OK</div></div>
+        </div>
+      </div>
+      <div class="bike-actions">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="openBikeDetail('${b.id}')">View Details</button>
+        <button class="btn btn-secondary btn-sm" onclick="openOdometerModal('${b.id}')" title="Update km">⚡</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBike('${b.id}')" title="Delete">🗑</button>
+      </div>
+    </div>`;
+  }).join('') + `<div class="bike-card" style="border-style:dashed;opacity:.4;display:flex;align-items:center;justify-content:center;min-height:220px;cursor:pointer" onclick="openModal('addBike')">
+    <div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">＋</div>
+    <div style="font-family:'Exo 2',sans-serif;font-weight:700;font-size:12px;color:var(--text3)">Add Motorcycle</div></div></div>`;
+}
+
+function deleteBike(bikeId) {
+  if (!confirm('Delete this motorcycle and all its maintenance data?')) return;
+  APP.bikes = APP.bikes.filter(b => b.id !== bikeId);
+  APP.items = APP.items.filter(i => i.bikeId !== bikeId);
+  APP.history = APP.history.filter(h => h.bikeId !== bikeId);
+  renderAll();
+}
+
+function openBikeDetail(bikeId) {
+  renderBikeDetail(bikeId);
+  nav('motodetail', null); setActiveNav('bikes');
+}
+
+// ─── RENDER BIKE DETAIL ──────────────────────────────────────────────────────
+function renderBikeDetail(bikeId) {
+  const bike  = APP.bikes.find(b => b.id === bikeId);
+  const items = APP.items.filter(i => i.bikeId === bikeId);
+  if (!bike) return;
+  const ov = items.filter(i=>i.status==='overdue').length;
+  const so = items.filter(i=>i.status==='due_soon').length;
+  const ok = items.filter(i=>i.status==='up_to_date').length;
+  const grouped = ['overdue','due_soon','up_to_date','never_serviced'].map(st => ({
+    st, items: items.filter(i=>i.status===st) })).filter(g=>g.items.length);
+  const sLabels = {overdue:'🔴 Overdue',due_soon:'🟡 Due Soon',up_to_date:'🟢 Up to Date',never_serviced:'⚫ Never Serviced'};
+  const history = APP.history.filter(h => h.bikeId === bikeId).slice(-5).reverse();
+  document.getElementById('detail-content').innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-ghost btn-sm" onclick="nav('bikes',null);setActiveNav('bikes')">← Back</button>
+        <div><div class="page-title">${bike.make} ${bike.model}</div>
+        <div class="page-sub">${bike.year}${bike.color?' · '+bike.color:''}${bike.nickname?' · "'+bike.nickname+'"':''}</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="openOdometerModal('${bike.id}')">⚡ Update km</button>
+        <button class="btn btn-primary btn-sm" onclick="nav('maintenance',null);setActiveNav('maintenance');renderMaintenance('${bike.id}')">🔧 Maintenance</button>
+      </div>
+    </div>
+    <div class="detail-split">
+      <div>
+        <div class="card" style="padding:20px;margin-bottom:16px">
+          <div class="section-hd">Bike Info</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Odometer</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--brand)">${bike.km.toLocaleString()} km</div></div>
+            <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Type</div>
+            <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text)">${BIKE_TYPES[bike.bikeType]?.label || bike.bikeType}</div></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <div style="flex:1;background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--red)">${ov}</div><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase">Overdue</div></div>
+            <div style="flex:1;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--amber)">${so}</div><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase">Due Soon</div></div>
+            <div style="flex:1;background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--green)">${ok}</div><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase">OK</div></div>
+          </div>
+        </div>
+        ${grouped.map(g => `
+          <div style="margin-bottom:16px">
+            <div class="section-hd">${sLabels[g.st]} (${g.items.length})</div>
+            <div class="card">${g.items.map(item => `
+              <div class="service-row" onclick="openCompleteModal('${item.id}')">
+                <span class="svc-icon">${icon(item.partType)}</span>
+                <div style="flex:1"><div class="svc-name">${item.partLabel}</div>
+                <div class="svc-meta">Every ${fmtKm(item.intervalKm)}</div></div>
+                ${badge(item.status)}
+                <div class="svc-right">
+                  <div class="km-val">${item.nextKm ? '@ '+fmtKm(item.nextKm) : fmtDate(item.nextDate)}</div>
+                  ${progress(item, bike.km)}
+                </div>
+              </div>`).join('')}</div>
+          </div>`).join('')}
+      </div>
+      <div>
+        <div class="card" style="padding:20px">
+          <div class="section-hd">Recent Service History</div>
+          ${history.length === 0 ? '<p style="color:var(--text3);font-size:13px;padding:8px 0">No service records yet.</p>' :
+            `<div class="timeline">${history.map(h => `
+              <div class="tl-item">
+                <div class="tl-dot" style="background:var(--brand)"></div>
+                <div class="tl-card">
+                  <div class="tl-top"><span style="font-size:15px">${icon(h.partType)}</span>
+                  <span class="tl-part">${h.partLabel}</span>
+                  <span class="tl-date">${fmtDate(h.date)}</span></div>
+                  <div class="tl-details">
+                    <span>📍 ${fmtKm(h.km)}</span>
+                    ${h.cost > 0 ? `<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>` : ''}
+                    ${h.notes ? `<span>${h.notes}</span>` : ''}
+                  </div>
+                </div>
+              </div>`).join('')}</div>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── RENDER MAINTENANCE ───────────────────────────────────────────────────────
+let _maintBikeId = null;
+let _maintFilter = 'all';
+let _maintSearch = '';
+
+function renderMaintenance(bikeId) {
+  if (bikeId) _maintBikeId = bikeId;
+  const listEl = document.getElementById('maint-list');
+  const titleEl = document.getElementById('maint-title');
+  const subEl   = document.getElementById('maint-sub');
+  if (!listEl) return;
+  if (APP.bikes.length === 0) {
+    listEl.innerHTML = `<div class="card" style="padding:40px;text-align:center"><div style="font-size:40px;margin-bottom:12px">🏍️</div><p style="color:var(--text3)">Add a motorcycle first to see maintenance items.</p></div>`;
+    return;
+  }
+  // Group by bike if no specific bike selected
+  const bikesToShow = _maintBikeId ? APP.bikes.filter(b=>b.id===_maintBikeId) : APP.bikes;
+  let html = '';
+  bikesToShow.forEach(bike => {
+    if (titleEl && _maintBikeId) titleEl.textContent = bike.make+' '+bike.model+' — Maintenance';
+    if (subEl && _maintBikeId) subEl.textContent = fmtKm(bike.km)+' · '+bike.year;
+    let items = APP.items.filter(i => i.bikeId === bike.id);
+    if (_maintFilter !== 'all') items = items.filter(i => {
+      if (_maintFilter==='overdue') return i.status==='overdue';
+      if (_maintFilter==='soon')    return i.status==='due_soon';
+      if (_maintFilter==='ok')      return i.status==='up_to_date'||i.status==='never_serviced';
+      return true;
+    });
+    if (_maintSearch) items = items.filter(i => i.partLabel.toLowerCase().includes(_maintSearch.toLowerCase()));
+    items.sort((a,b) => (STATUS_CFG[a.status]?.order??9) - (STATUS_CFG[b.status]?.order??9));
+    if (!_maintBikeId) html += `<div class="section-hd">${bike.make} ${bike.model} — ${bike.km.toLocaleString()} km</div>`;
+    if (items.length === 0) { html += `<div class="card" style="padding:20px;text-align:center;color:var(--text3);margin-bottom:16px">No items match filter.</div>`; return; }
+    html += `<div class="card" style="margin-bottom:16px">${items.map(item => `
+      <div class="service-row maint-item" data-status="${item.status}">
+        <span class="svc-icon">${icon(item.partType)}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px"><span class="svc-name">${item.partLabel}</span>${badge(item.status)}</div>
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">✓ Mark Done</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 16px;margin-top:6px;font-size:12px;color:var(--text3)">
+            <span>Last: <span class="km-val">${fmtKm(item.lastKm)}</span></span>
+            <span>Due: <span class="km-val">${item.nextKm ? fmtKm(item.nextKm) : fmtDate(item.nextDate)}</span></span>
+            <span>Interval: <span class="km-val">${fmtKm(item.intervalKm)}</span></span>
+            <span>Date due: ${fmtDate(item.nextDate)}</span>
+          </div>
+          ${progress(item, bike.km)}
+          ${item.note ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${item.note}</div>` : ''}
+        </div>
+      </div>`).join('')}</div>`;
+  });
+  if (titleEl && !_maintBikeId) { titleEl.textContent = 'Maintenance'; if (subEl) subEl.textContent = 'All service items across all bikes'; }
+  listEl.innerHTML = html || `<div class="card" style="padding:40px;text-align:center;color:var(--text3)">No items to show.</div>`;
+}
+
+function filterMaint(f) { _maintFilter = f; renderMaintenance(); }
+function searchMaint(q) { _maintSearch = q; renderMaintenance(); }
+
+// ─── RENDER HISTORY ──────────────────────────────────────────────────────────
+function renderHistory() {
+  const listEl  = document.getElementById('hist-list');
+  const countEl = document.getElementById('hist-count');
+  const spendEl = document.getElementById('hist-spend');
+  const filterEl= document.getElementById('hist-bike-filter');
+  if (!listEl) return;
+  // Populate bike filter dropdown
+  if (filterEl) {
+    const cur = filterEl.value;
+    filterEl.innerHTML = '<option value="all">All bikes</option>' +
+      APP.bikes.map(b => `<option value="${b.id}">${b.make} ${b.model}</option>`).join('');
+    filterEl.value = APP.bikes.find(b=>b.id===cur) ? cur : 'all';
+  }
+  const filterBike = filterEl ? filterEl.value : 'all';
+  const records = APP.history.filter(h => filterBike === 'all' || h.bikeId === filterBike)
+    .slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+  const totalCost = records.reduce((s,r) => s + (r.cost||0), 0);
+  if (countEl) countEl.textContent = records.length;
+  if (spendEl) spendEl.innerHTML = `<span class="currency-display">${getCurrency()}</span> ${totalCost.toFixed(2)}`;
+  if (records.length === 0) {
+    listEl.innerHTML = `<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">📋</div><p style="color:var(--text3)">No service records yet. Mark maintenance items as done to start tracking history.</p></div>`;
+    return;
+  }
+  listEl.innerHTML = `<div class="timeline">${records.map(h => {
+    const bike = APP.bikes.find(b => b.id === h.bikeId);
+    return `<div class="tl-item">
+      <div class="tl-dot" style="background:var(--brand)"></div>
+      <div class="tl-card">
+        <div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>
+        <span class="tl-part">${h.partLabel}${bike ? ' — '+bike.make+' '+bike.model : ''}</span>
+        <span class="tl-date">${fmtDate(h.date)}</span></div>
+        <div class="tl-details">
+          <span>📍 ${fmtKm(h.km)}</span>
+          ${h.cost > 0 ? `<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>` : ''}
+          ${h.notes ? `<span>📝 ${h.notes}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ─── RENDER OVERVIEW ─────────────────────────────────────────────────────────
+function renderOverview() {
+  const ovEl = document.getElementById('ov-summary');
+  if (!ovEl) return;
+  const overdue = APP.items.filter(i=>i.status==='overdue');
+  const soon    = APP.items.filter(i=>i.status==='due_soon');
+  const ok      = APP.items.filter(i=>i.status==='up_to_date');
+  const totalCost = APP.history.reduce((s,h)=>s+(h.cost||0),0);
+  const recent = APP.history.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  ovEl.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--glow)">🏍️</div><div class="stat-label">My Bikes</div><div class="stat-val" style="color:var(--brand)">${APP.bikes.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg)">⚠️</div><div class="stat-label">Overdue</div><div class="stat-val" style="color:var(--red)">${overdue.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🕐</div><div class="stat-label">Due Soon</div><div class="stat-val" style="color:var(--amber)">${soon.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">✅</div><div class="stat-label">Up to Date</div><div class="stat-val" style="color:var(--green)">${ok.length}</div></div>
+    </div>
+    <div class="section-hd">Recent Services</div>
+    ${recent.length === 0 ? '<div class="card" style="padding:24px;text-align:center;color:var(--text3)">No services recorded yet.</div>' :
+      `<div class="card">${recent.map(h => {
+        const bike = APP.bikes.find(b=>b.id===h.bikeId);
+        return `<div class="service-row" style="cursor:default">
+          <span class="svc-icon">${icon(h.partType)}</span>
+          <div style="flex:1"><div class="svc-name">${h.partLabel}${bike ? ' — '+bike.make+' '+bike.model : ''}</div>
+          <div class="svc-meta">${fmtDate(h.date)}</div></div>
+          <span class="badge badge-ok">Completed</span>
+          <div class="svc-right"><div class="km-val">${fmtKm(h.km)}${h.cost>0?' · '+getCurrency()+' '+h.cost.toFixed(2):''}</div></div>
+        </div>`;}).join('')}</div>`}`;
+
+  // Due services tab
+  const dueEl = document.getElementById('ov-due');
+  if (dueEl) dueEl.innerHTML = overdue.length === 0 && soon.length === 0 ?
+    `<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">✅</div><p style="color:var(--text3)">No services currently due!</p></div>` :
+    (overdue.length ? `<div class="section-hd" style="color:var(--red)">⚠ Overdue (${overdue.length})</div>
+      <div class="card" style="margin-bottom:16px">${overdue.map(item => {
+        const bike = APP.bikes.find(b=>b.id===item.bikeId);
+        return `<div class="service-row" onclick="openCompleteModal('${item.id}')">
+          <span class="svc-icon">${icon(item.partType)}</span>
+          <div style="flex:1"><div class="svc-name">${item.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div></div>
+          ${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Mark Done</button>
+        </div>`}).join('')}</div>` : '') +
+    (soon.length ? `<div class="section-hd" style="color:var(--amber)">🕐 Due Soon (${soon.length})</div>
+      <div class="card">${soon.map(item => {
+        const bike = APP.bikes.find(b=>b.id===item.bikeId);
+        return `<div class="service-row" onclick="openCompleteModal('${item.id}')">
+          <span class="svc-icon">${icon(item.partType)}</span>
+          <div style="flex:1"><div class="svc-name">${item.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div></div>
+          ${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Mark Done</button>
+        </div>`}).join('')}</div>` : '');
+
+  // Analytics tab
+  const anaEl = document.getElementById('ov-analytics');
+  if (anaEl) {
+    const partCounts = {};
+    APP.history.forEach(h => { partCounts[h.partLabel] = (partCounts[h.partLabel]||0)+1; });
+    const topParts = Object.entries(partCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const maxCount = topParts[0]?.[1] || 1;
+    anaEl.innerHTML = `
+      <div class="grid2" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-val">${APP.history.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-val" style="color:var(--brand)">${getCurrency()} ${totalCost.toFixed(2)}</div></div>
+      </div>
+      <div class="section-hd">Top Serviced Parts</div>
+      ${topParts.length === 0 ? '<div class="card" style="padding:20px;text-align:center;color:var(--text3)">No history yet.</div>' :
+        `<div class="card">${topParts.map(([label, count]) => `
+          <div class="service-row" style="cursor:default">
+            <span class="svc-icon">🔧</span>
+            <div style="flex:1"><div class="svc-name">${label}</div>
+            <div style="margin-top:5px;height:4px;background:var(--s4);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${Math.round((count/maxCount)*100)}%;background:var(--brand);border-radius:2px"></div></div></div>
+            <div class="km-val">${count}x</div>
+          </div>`).join('')}</div>`}`;
+  }
+}
+
+// ─── RENDER ALL ──────────────────────────────────────────────────────────────
+function renderAll() {
+  renderDashboard();
+  renderBikes();
+  renderMaintenance();
+  renderHistory();
+  renderOverview();
+  if (typeof renderTypeSwitcher === 'function') renderTypeSwitcher();
+}
+
+// ─── NAV + STATE ─────────────────────────────────────────────────────────────
+let currentTheme    = 'dark';
+let currentCurrency = 'SGD';
+const CURRENCY_SYMBOLS = { SGD:'S$',MYR:'RM',USD:'$',EUR:'€',GBP:'£',JPY:'¥',AUD:'A$',IDR:'Rp' };
+
+function nav(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  setActiveNav(page);
+  document.getElementById('main').scrollTop = 0;
+  window.scrollTo(0, 0);
+  if (page === 'maintenance') renderMaintenance();
+  if (page === 'history')     renderHistory();
+  if (page === 'overview')    renderOverview();
+  if (page === 'dashboard')   renderDashboard();
+}
+
+function setActiveNav(page) {
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  const map = { dashboard:'dashboard',bikes:'bikes',motodetail:'bikes',maintenance:'maintenance',history:'history',overview:'overview',settings:'settings' };
+  const el = document.getElementById('bnav-' + (map[page]||page));
+  if (el) el.classList.add('active');
+}
+
+function openModal(id) { document.getElementById('modal-'+id)?.classList.add('open'); if(id==='addBike') setTimeout(initAddBikeModal,30); }
+function closeModal(id) { document.getElementById('modal-'+id)?.classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function setTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  currentTheme = theme;
+  ['dark','mid','light'].forEach(t => document.getElementById('theme-'+t)?.classList.toggle('selected', t===theme));
+  showToast('🎨 '+theme.charAt(0).toUpperCase()+theme.slice(1)+' theme applied');
+}
+
+function setCurrency(code, btn) {
+  currentCurrency = code;
+  document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  const sym = CURRENCY_SYMBOLS[code] || code;
+  document.querySelectorAll('.currency-display').forEach(el => el.textContent = sym);
+  showToast('💱 Currency set to '+code);
+  renderHistory(); renderOverview();
+}
+
+function overviewTab(tab, el) {
+  ['summary','due','analytics','templates'].forEach(t => { const e=document.getElementById('ov-'+t); if(e) e.style.display='none'; });
+  document.getElementById('ov-'+tab).style.display='';
+  document.querySelectorAll('#page-overview .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderOverview();
+}
+
+// ─── ADD BIKE MODAL ───────────────────────────────────────────────────────────
+let selectedBikeType = null;
+
+function initAddBikeModal() {
+  const grid = document.getElementById('type-grid');
+  if (!grid || grid.children.length > 0) return;
+  Object.entries(BIKE_TYPES).forEach(([key, t]) => {
+    const card = document.createElement('div');
+    card.className = 'type-card';
+    card.dataset.type = key;
+    card.innerHTML = '<span class="type-card-icon">'+t.icon+'</span><div class="type-card-name">'+t.label+'</div><div class="type-card-desc">'+t.desc+'</div>';
+    card.onclick = () => {
+      document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedBikeType = key;
+      const nb = document.getElementById('type-next-btn');
+      if (nb) { nb.disabled=false; nb.style.opacity='1'; }
+    };
+    grid.appendChild(card);
+  });
+}
+
+function addBikeStep2() {
+  if (!selectedBikeType) return;
+  document.getElementById('add-step-1').style.display='none';
+  document.getElementById('add-step-2').style.display='';
+  document.getElementById('add-step-dot-2').style.background='var(--brand)';
+  const t = BIKE_TYPES[selectedBikeType];
+  const badge2 = document.getElementById('selected-type-badge');
+  if (badge2) badge2.innerHTML = t.icon+' '+t.label;
+  const previewEl = document.getElementById('type-preview-items');
+  if (previewEl) {
+    previewEl.innerHTML='';
+    t.items.forEach(item => {
+      const pill=document.createElement('div');
+      pill.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:11px;background:var(--s4);color:var(--text2);border:1px solid var(--border)';
+      pill.textContent=item.n;
+      previewEl.appendChild(pill);
+    });
+  }
+}
+
+function addBikeStep1() {
+  document.getElementById('add-step-1').style.display='';
+  document.getElementById('add-step-2').style.display='none';
+  document.getElementById('add-step-dot-2').style.background='var(--s5)';
+}
+
+// ─── TEMPLATES (Overview tab) ─────────────────────────────────────────────────
+let activeTemplateType = 'naked';
+
+function renderTemplates(typeKey) {
+  activeTemplateType = typeKey;
+  const tplEl = document.getElementById('templates-list');
+  if (!tplEl || !BIKE_TYPES[typeKey]) return;
+  const typeInfo = BIKE_TYPES[typeKey];
+  tplEl.innerHTML = '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--border)">'+
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+    '<span style="font-size:20px">'+typeInfo.icon+'</span>'+
+    '<div style="flex:1"><div style="font-family:\'Exo 2\',sans-serif;font-weight:700;font-size:14px;color:var(--text)">'+typeInfo.label+'</div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+typeInfo.source+'</div></div></div></div>';
+  typeInfo.items.forEach((t, idx) => {
+    const row = document.createElement('div');
+    row.className='tpl-row'; row.dataset.idx=idx;
+    row.innerHTML='<span class="tpl-icon">'+t.i+'</span>'+
+      '<span class="tpl-name">'+t.n+'</span>'+
+      '<div class="tpl-vals">'+
+        '<div class="tpl-val-display">'+
+          '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:500;color:var(--text2);text-align:right">'+(t.km>0?t.km.toLocaleString()+' km':'—')+'</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:right">'+t.days+' days</div>'+
+        '</div>'+
+        '<div class="tpl-edit-fields">'+
+          '<div><div class="tpl-mini-label">km</div><input class="tpl-mini-input km-inp" type="number" value="'+t.km+'" min="0" step="500"/></div>'+
+          '<div><div class="tpl-mini-label">days</div><input class="tpl-mini-input days-inp" type="number" value="'+t.days+'" min="1" step="1"/></div>'+
+        '</div>'+
+        '<button class="btn btn-ghost btn-sm btn-icon tpl-edit-btn edit-icon" onclick="tplEdit('+idx+')" title="Edit">✏️</button>'+
+        '<button class="btn btn-primary btn-sm btn-icon tpl-edit-btn save-icon" onclick="tplSave('+idx+')" title="Save">✓</button>'+
+      '</div>';
+    tplEl.appendChild(row);
+  });
+}
+
+function renderTypeSwitcher() {
+  const container = document.getElementById('ov-templates');
+  if (!container) return;
+  const existing = document.getElementById('type-switcher');
+  if (existing) existing.remove();
+  const switcher = document.createElement('div');
+  switcher.id = 'type-switcher';
+  switcher.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:4px';
+  Object.entries(BIKE_TYPES).forEach(([key,t]) => {
+    const btn = document.createElement('button');
+    btn.className='btn btn-sm '+(key===activeTemplateType?'btn-primary':'btn-secondary');
+    btn.style.flexShrink='0';
+    btn.innerHTML=t.icon+' '+t.label.split(' /')[0].trim();
+    btn.onclick = () => { renderTemplates(key); renderTypeSwitcher(); };
+    switcher.appendChild(btn);
+  });
+  const tplCard = document.getElementById('templates-list');
+  if (tplCard) container.insertBefore(switcher, tplCard);
+}
+
+function tplEdit(idx) { const row=document.querySelector('.tpl-row[data-idx="'+idx+'"]'); if(row) row.classList.add('editing'); }
+function tplSave(idx) {
+  const row=document.querySelector('.tpl-row[data-idx="'+idx+'"]');
+  if (!row) return;
+  const kmVal  = parseInt(row.querySelector('.km-inp').value)   || 0;
+  const daysVal= parseInt(row.querySelector('.days-inp').value) || 1;
+  const items  = BIKE_TYPES[activeTemplateType]?.items;
+  if (items?.[idx]) { items[idx].km=kmVal; items[idx].days=daysVal; }
+  const disp = row.querySelector('.tpl-val-display');
+  if (disp) disp.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:500;color:var(--brand);text-align:right">'+(kmVal>0?kmVal.toLocaleString()+' km':'—')+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:right">'+daysVal+' days</div>';
+  row.classList.remove('editing');
+  const name = items?.[idx]?.n || 'Item';
+  showToast('✓ '+name+' interval updated');
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+(function init() {
+  // Set today's date on dashboard
+  const dateEl = document.getElementById('dash-date');
+  if (dateEl) {
+    const now = new Date();
+    dateEl.textContent = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+  renderAll();
+  renderTemplates('naked');
+  renderTypeSwitcher();
+})();
 </script>
 
 <!-- MOBILE BOTTOM NAV -->
