@@ -539,6 +539,90 @@ select.form-input option{background:var(--s3)}
 </head>
 <body data-theme="dark">
 
+<!-- ════════════════════════════════════
+     LOGIN / REGISTER OVERLAY
+     Shown until user is authenticated
+     ════════════════════════════════════ -->
+<div id="auth-overlay" style="
+  position:fixed;inset:0;z-index:999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;
+  transition:opacity .3s;
+">
+  <div style="width:100%;max-width:400px">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="width:64px;height:64px;border-radius:18px;background:var(--glow);border:1px solid rgba(249,115,22,0.3);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">🏍️</div>
+      <h1 style="font-family:'Exo 2',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px">MotoMaintain</h1>
+      <p style="font-size:13px;color:var(--text3)">Your motorcycle service tracker</p>
+    </div>
+
+    <!-- Card -->
+    <div class="card" style="padding:28px">
+      <!-- Tabs -->
+      <div style="display:flex;background:var(--s3);border-radius:9px;padding:3px;margin-bottom:22px">
+        <button id="tab-login" onclick="switchAuthTab('login')"
+          style="flex:1;padding:7px;border:none;cursor:pointer;border-radius:7px;font-family:'Exo 2',sans-serif;font-size:13px;font-weight:700;background:var(--brand);color:#fff;transition:all .15s">
+          Sign In
+        </button>
+        <button id="tab-register" onclick="switchAuthTab('register')"
+          style="flex:1;padding:7px;border:none;cursor:pointer;border-radius:7px;font-family:'Exo 2',sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text3);transition:all .15s">
+          Create Account
+        </button>
+      </div>
+
+      <!-- Error -->
+      <div id="auth-error" style="display:none;padding:10px 14px;border-radius:8px;background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);font-size:13px;margin-bottom:16px"></div>
+
+      <!-- Login form -->
+      <div id="form-login">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Email</label>
+          <input id="login-email" type="email" class="form-input" placeholder="you@example.com"
+            onkeydown="if(event.key==='Enter')doLogin()"/>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label class="form-label">Password</label>
+          <input id="login-pw" type="password" class="form-input" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter')doLogin()"/>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doLogin()" id="login-btn">
+          Sign In
+        </button>
+      </div>
+
+      <!-- Register form -->
+      <div id="form-register" style="display:none">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Full Name</label>
+          <input id="reg-name" type="text" class="form-input" placeholder="Ahmad Razif"
+            onkeydown="if(event.key==='Enter')doRegister()"/>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Email</label>
+          <input id="reg-email" type="email" class="form-input" placeholder="you@example.com"
+            onkeydown="if(event.key==='Enter')doRegister()"/>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label class="form-label">Password <span style="color:var(--text3);font-weight:400;text-transform:none;font-size:10px">(min. 8 characters)</span></label>
+          <input id="reg-pw" type="password" class="form-input" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter')doRegister()"/>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doRegister()" id="register-btn">
+          Create Account
+        </button>
+      </div>
+    </div>
+
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:16px">
+      Your data is stored securely in Appwrite Cloud.
+    </p>
+  </div>
+</div>
+
+
+
 <!-- MOBILE TOP BAR -->
 <div id="mobile-topbar">
   <div class="topbar-logo">
@@ -764,7 +848,7 @@ select.form-input option{background:var(--s3)}
     <div class="tab active" onclick="overviewTab('summary',this)">Summary</div>
     <div class="tab" onclick="overviewTab('due',this)">Due Services</div>
     <div class="tab" onclick="overviewTab('analytics',this)">Analytics</div>
-    <div class="tab" onclick="overviewTab('templates',this)">Templates</div>
+    <div class="tab" id="tab-templates" onclick="overviewTab('templates',this)" style="display:none">Templates</div>
   </div>
   <div id="ov-summary"></div>
   <div id="ov-due" style="display:none"></div>
@@ -901,7 +985,7 @@ select.form-input option{background:var(--s3)}
       </div>
       <div style="margin-top:16px;display:flex;gap:10px">
         <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
-        <button class="btn btn-danger" onclick="signOut()">Sign Out</button>
+        <button class="btn btn-danger" onclick="doLogout()">Sign Out</button>
       </div>
     </div>
   </div>
@@ -1047,8 +1131,403 @@ const APPWRITE_PROJECT_ID = '6a0fce4800389b0e9917';              // Settings →
 const APPWRITE_DATABASE   = 'moto_maintain_db';                  // Database ID from setup script
 // ═══════════════════════════════════════════════════════════════
 
-// Appwrite SDK will be initialised when auth is implemented.
-// Your config above is saved and ready.
+// ─── APPWRITE RAW API ────────────────────────────────────────────────────────
+// Uses built-in fetch — no SDK needed (avoids CDN compatibility issues)
+async function awFetch(method, path, body, sessionToken) {
+  const headers = {
+    'Content-Type':             'application/json',
+    'X-Appwrite-Project':       APPWRITE_PROJECT_ID,
+    'X-SDK-Name':               'MotoMaintain',
+  };
+  if (sessionToken) headers['X-Appwrite-Session'] = sessionToken;
+
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+
+  const res  = await fetch(APPWRITE_ENDPOINT + path, opts);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err  = new Error(json.message || 'Request failed');
+    err.code   = res.status;
+    err.type   = json.type || '';
+    throw err;
+  }
+  return json;
+}
+
+// ─── AUTH STATE ───────────────────────────────────────────────────────────────
+let AW_SESSION = null; // { userId, sessionId, sessionSecret, name, email, labels[] }
+
+function saveSession(s) {
+  try { localStorage.setItem('mm_session', JSON.stringify(s)); } catch {}
+  AW_SESSION = s;
+}
+function loadSession() {
+  try {
+    const raw = localStorage.getItem('mm_session');
+    if (raw) { AW_SESSION = JSON.parse(raw); return AW_SESSION; }
+  } catch {}
+  return null;
+}
+function clearSession() {
+  try { localStorage.removeItem('mm_session'); } catch {}
+  AW_SESSION = null;
+}
+function isAdmin() {
+  return !!(AW_SESSION && AW_SESSION.labels && AW_SESSION.labels.includes('admin'));
+}
+function isOnline() {
+  return APPWRITE_PROJECT_ID !== 'your_project_id_here' && APPWRITE_PROJECT_ID !== '';
+}
+
+// ─── AUTH FUNCTIONS ───────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  if (!email || !pw) { showAuthError('Please enter your email and password.'); return; }
+
+  setAuthLoading(true);
+  try {
+    // If Appwrite is not configured → offline demo mode
+    if (!isOnline()) {
+      clearAuthError();
+      hideAuthOverlay();
+      initAppForUser({ name: email.split('@')[0], email, labels: [], userId: 'demo' });
+      return;
+    }
+
+    const session = await awFetch('POST', '/account/sessions/email', { email, password: pw });
+    // Get full account info to fetch name and labels
+    const account = await awFetch('GET', '/account', null);
+    saveSession({
+      userId:    account.$id,
+      sessionId: session.$id,
+      name:      account.name || email.split('@')[0],
+      email:     account.email,
+      labels:    account.labels || [],
+    });
+    clearAuthError();
+    hideAuthOverlay();
+    await initAppForUser(AW_SESSION);
+  } catch (err) {
+    if (err.code === 401) showAuthError('Incorrect email or password. Please try again.');
+    else if (err.code === 429) showAuthError('Too many attempts. Please wait a moment.');
+    else showAuthError(err.message || 'Login failed. Check your connection.');
+  } finally {
+    setAuthLoading(false);
+  }
+}
+
+async function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pw    = document.getElementById('reg-pw').value;
+  if (!name)          { showAuthError('Please enter your full name.');           return; }
+  if (!email)         { showAuthError('Please enter your email address.');        return; }
+  if (pw.length < 8)  { showAuthError('Password must be at least 8 characters.'); return; }
+
+  setAuthLoading(true);
+  try {
+    if (!isOnline()) {
+      clearAuthError();
+      hideAuthOverlay();
+      initAppForUser({ name, email, labels: [], userId: 'demo' });
+      return;
+    }
+
+    // 1. Create account
+    await awFetch('POST', '/account', {
+      userId: 'unique()', name, email, password: pw,
+    });
+    // 2. Auto-login
+    document.getElementById('login-email').value = email;
+    document.getElementById('login-pw').value    = pw;
+    await doLogin();
+  } catch (err) {
+    if (err.type === 'user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
+    else showAuthError(err.message || 'Registration failed.');
+  } finally {
+    setAuthLoading(false);
+  }
+}
+
+async function doLogout() {
+  if (isOnline() && AW_SESSION) {
+    try { await awFetch('DELETE', '/account/sessions/current', null); } catch {}
+  }
+  clearSession();
+  // Reset app state
+  APP.bikes   = [];
+  APP.items   = [];
+  APP.history = [];
+  APP.nextId  = 1;
+  APP.profile = { name: 'Rider', email: '' };
+  clearState();
+  currentTheme = 'dark';
+  currentCurrency = 'SGD';
+  document.body.setAttribute('data-theme', 'dark');
+  // Show login screen again
+  showAuthOverlay();
+  renderAll();
+  nav('dashboard', null);
+  setActiveNav('dashboard');
+}
+
+// ─── AUTH UI HELPERS ──────────────────────────────────────────────────────────
+function showAuthOverlay() {
+  const el = document.getElementById('auth-overlay');
+  if (el) { el.style.display = 'flex'; el.style.opacity = '1'; }
+}
+function hideAuthOverlay() {
+  const el = document.getElementById('auth-overlay');
+  if (!el) return;
+  el.style.opacity = '0';
+  setTimeout(() => { el.style.display = 'none'; }, 300);
+}
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  if (el) { el.textContent = msg; el.style.display = ''; }
+}
+function clearAuthError() {
+  const el = document.getElementById('auth-error');
+  if (el) el.style.display = 'none';
+}
+function setAuthLoading(on) {
+  const lb = document.getElementById('login-btn');
+  const rb = document.getElementById('register-btn');
+  if (lb) lb.textContent = on ? '...' : 'Sign In';
+  if (rb) rb.textContent = on ? '...' : 'Create Account';
+}
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('form-login').style.display    = isLogin ? '' : 'none';
+  document.getElementById('form-register').style.display = isLogin ? 'none' : '';
+  document.getElementById('tab-login').style.background    = isLogin ? 'var(--brand)' : 'transparent';
+  document.getElementById('tab-login').style.color         = isLogin ? '#fff' : 'var(--text3)';
+  document.getElementById('tab-register').style.background = isLogin ? 'transparent' : 'var(--brand)';
+  document.getElementById('tab-register').style.color      = isLogin ? 'var(--text3)' : '#fff';
+  clearAuthError();
+}
+
+// ─── APPWRITE DATA LAYER ──────────────────────────────────────────────────────
+const Q = {
+  equal:   (k,v)  => `equal("${k}","${v}")`,
+  orderDesc: (k)  => `orderDesc("${k}")`,
+  limit:   (n)    => `limit(${n})`,
+};
+
+function awQuery(queries) {
+  return queries.map(q => `queries[]=${encodeURIComponent(q)}`).join('&');
+}
+
+async function awList(collection, queries=[]) {
+  const qs = awQuery(queries);
+  const path = `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents${qs ? '?'+qs : ''}`;
+  return awFetch('GET', path, null);
+}
+
+async function awCreate(collection, data) {
+  return awFetch('POST', `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents`, {
+    documentId: 'unique()', data, permissions: [],
+  });
+}
+
+async function awUpdate(collection, docId, data) {
+  return awFetch('PATCH', `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents/${docId}`, { data });
+}
+
+async function awDelete(collection, docId) {
+  return awFetch('DELETE', `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents/${docId}`, null);
+}
+
+// ─── USER DATA BOOTSTRAP ──────────────────────────────────────────────────────
+async function initAppForUser(session) {
+  APP.profile = { name: session.name, email: session.email };
+
+  // Show/hide Templates tab based on admin role
+  const tplTab = document.getElementById('tab-templates');
+  if (tplTab) tplTab.style.display = isAdmin() ? '' : 'none';
+
+  // Update sidebar
+  updateNameEverywhere(session.name);
+
+  // Update sign-out wiring (replace the old signOut fn references)
+  const pn = document.getElementById('profile-name');
+  const pe = document.getElementById('profile-email');
+  if (pn) pn.value = session.name;
+  if (pe) pe.value = session.email;
+
+  if (!isOnline() || !session.userId || session.userId === 'demo') {
+    // Offline / demo mode — use localStorage data
+    loadState();
+    renderAll();
+    renderTemplates('naked'); renderTypeSwitcher();
+    return;
+  }
+
+  // ── Online: fetch user's data from Appwrite ──
+  try {
+    const [bikesRes, itemsRes, histRes] = await Promise.all([
+      awList('motorcycles',       [Q.equal('userId', session.userId), Q.limit(100)]),
+      awList('maintenance_items', [Q.equal('userId', session.userId), Q.limit(500)]),
+      awList('service_records',   [Q.equal('userId', session.userId), Q.orderDesc('serviceDate'), Q.limit(500)]),
+    ]);
+
+    // Map Appwrite documents → APP state shape
+    APP.bikes = (bikesRes.documents || []).map(d => ({
+      id: d.$id, make: d.make, model: d.model, year: d.year,
+      km: d.currentKm, nickname: d.nickname || '', color: d.color || '',
+      vin: d.vin || '', bikeType: d.bikeType || 'naked',
+      addedAt: d.$createdAt,
+    }));
+    APP.items = (itemsRes.documents || []).map(d => ({
+      id: d.$id, bikeId: d.motorcycleId, partType: d.partType,
+      partLabel: d.partLabel, intervalKm: d.intervalKm, intervalDays: d.intervalDays,
+      lastKm: d.lastServiceKm, lastDate: d.lastServiceDate,
+      nextKm: d.nextDueKm, nextDate: d.nextDueDate, status: d.status,
+      note: '', isCustom: d.isCustomInterval || false,
+    }));
+    APP.history = (histRes.documents || []).map(d => ({
+      id: d.$id, bikeId: d.motorcycleId, itemId: d.maintenanceItemId,
+      partLabel: d.partLabel, partType: d.partType,
+      km: d.mileageAtService, date: d.serviceDate,
+      cost: d.cost || 0, notes: d.notes || '',
+      completedAt: d.$createdAt,
+    }));
+    // Derive nextId from highest existing id number
+    const allNums = [...APP.bikes, ...APP.items, ...APP.history]
+      .map(x => parseInt((x.id||'').replace(/\D/g,''))||0);
+    APP.nextId = allNums.length ? Math.max(...allNums) + 1 : 1;
+
+    saveState(); // cache locally
+  } catch (err) {
+    console.warn('Appwrite fetch failed, falling back to localStorage:', err.message);
+    loadState();
+  }
+
+  renderAll();
+  renderTemplates('naked'); renderTypeSwitcher();
+}
+
+// ─── APPWRITE SYNC HELPERS ────────────────────────────────────────────────────
+// Called alongside localStorage saves when online
+
+async function syncBikeCreate(bike) {
+  if (!isOnline() || !AW_SESSION) return;
+  try {
+    const doc = await awCreate('motorcycles', {
+      userId: AW_SESSION.userId, make: bike.make, model: bike.model,
+      year: bike.year, currentKm: bike.km, nickname: bike.nickname || '',
+      color: bike.color || '', vin: bike.vin || '', bikeType: bike.bikeType || 'naked',
+    });
+    // Store the Appwrite doc $id back as bike.id so future updates use it
+    bike.id = doc.$id;
+  } catch (err) { console.warn('syncBikeCreate failed:', err.message); }
+}
+
+async function syncBikeDelete(bikeId) {
+  if (!isOnline() || !AW_SESSION) return;
+  try { await awDelete('motorcycles', bikeId); } catch {}
+}
+
+async function syncBikeKm(bikeId, newKm) {
+  if (!isOnline() || !AW_SESSION) return;
+  try { await awUpdate('motorcycles', bikeId, { currentKm: newKm }); } catch {}
+}
+
+async function syncItemCreate(item) {
+  if (!isOnline() || !AW_SESSION) return;
+  try {
+    const doc = await awCreate('maintenance_items', {
+      motorcycleId: item.bikeId, userId: AW_SESSION.userId,
+      partType: item.partType, partLabel: item.partLabel,
+      intervalKm: item.intervalKm, intervalDays: item.intervalDays,
+      lastServiceKm: item.lastKm, lastServiceDate: item.lastDate,
+      nextDueKm: item.nextKm, nextDueDate: item.nextDate,
+      status: item.status, isCustomInterval: item.isCustom || false,
+    });
+    item.id = doc.$id;
+  } catch (err) { console.warn('syncItemCreate failed:', err.message); }
+}
+
+async function syncItemUpdate(item) {
+  if (!isOnline() || !AW_SESSION) return;
+  try {
+    await awUpdate('maintenance_items', item.id, {
+      intervalKm: item.intervalKm, intervalDays: item.intervalDays,
+      lastServiceKm: item.lastKm, lastServiceDate: item.lastDate,
+      nextDueKm: item.nextKm, nextDueDate: item.nextDate,
+      status: item.status, isCustomInterval: item.isCustom || false,
+    });
+  } catch (err) { console.warn('syncItemUpdate failed:', err.message); }
+}
+
+async function syncItemDelete(itemId) {
+  if (!isOnline() || !AW_SESSION) return;
+  try { await awDelete('maintenance_items', itemId); } catch {}
+}
+
+async function syncHistoryCreate(record) {
+  if (!isOnline() || !AW_SESSION) return;
+  try {
+    const doc = await awCreate('service_records', {
+      motorcycleId: record.bikeId, maintenanceItemId: record.itemId,
+      userId: AW_SESSION.userId, completedBy: AW_SESSION.userId,
+      partType: record.partType, partLabel: record.partLabel,
+      serviceDate: record.date, mileageAtService: record.km,
+      cost: record.cost || null, notes: record.notes || null,
+    });
+    record.id = doc.$id;
+  } catch (err) { console.warn('syncHistoryCreate failed:', err.message); }
+}
+
+async function syncHistoryDelete(recordId) {
+  if (!isOnline() || !AW_SESSION) return;
+  try { await awDelete('service_records', recordId); } catch {}
+}
+
+// Admin: save template update to Appwrite service_templates collection
+async function syncTemplateSave(typeKey, itemIdx, kmVal, daysVal) {
+  if (!isOnline() || !isAdmin()) return;
+  try {
+    // Find the document with matching partType
+    const type = BIKE_TYPES[typeKey];
+    if (!type || !type.items[itemIdx]) return;
+    const partType = type.items[itemIdx].partType || (typeKey + '_' + itemIdx);
+    const res = await awList('service_templates', [Q.equal('partType', partType), Q.limit(1)]);
+    if (res.documents && res.documents.length > 0) {
+      await awUpdate('service_templates', res.documents[0].$id, {
+        defaultIntervalKm: kmVal, defaultIntervalDays: daysVal,
+      });
+    }
+  } catch (err) { console.warn('syncTemplateSave failed:', err.message); }
+}
+
+// Fetch admin templates from Appwrite when adding a bike (so user gets latest admin settings)
+async function fetchLatestTemplates(typeKey) {
+  if (!isOnline()) return null;
+  try {
+    const res = await awList('service_templates', [Q.limit(100)]);
+    if (!res.documents || !res.documents.length) return null;
+    // Filter to items matching this bike type
+    const docs = res.documents.filter(d => {
+      const bt = (d.bikeTypes || 'all');
+      return bt === 'all' || bt.split(',').map(s=>s.trim()).includes(typeKey);
+    });
+    if (!docs.length) return null;
+    // Map to the same shape as BIKE_TYPES items
+    const type = BIKE_TYPES[typeKey];
+    return (type ? type.items : []).map(t => {
+      const match = docs.find(d => d.partType === t.partType);
+      if (match) {
+        return { ...t, km: match.defaultIntervalKm, days: match.defaultIntervalDays };
+      }
+      return t;
+    });
+  } catch { return null; }
+}
+
+
 
 // ── Bike type definitions with type-specific maintenance intervals ──
 // Sources: General guidelines derived from Honda, Kawasaki, Yamaha, Suzuki
@@ -1327,6 +1806,7 @@ function tplSave(idx) {
   const itemName = (BIKE_TYPES[activeTemplateType] && BIKE_TYPES[activeTemplateType].items[idx])
     ? BIKE_TYPES[activeTemplateType].items[idx].n : 'Item';
   showToast('✓ ' + itemName + ' interval updated');
+  if (isAdmin()) syncTemplateSave(activeTemplateType, idx, kmVal, daysVal);
 }
 
 // ─── APP STATE ────────────────────────────────────────────────────────────────
@@ -1345,7 +1825,8 @@ const STORAGE_KEY = 'motomaintain_v1';
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    const _uid = AW_SESSION ? AW_SESSION.userId : 'local';
+    localStorage.setItem(STORAGE_KEY + '_' + _uid, JSON.stringify({
       bikes:    APP.bikes,
       items:    APP.items,
       history:  APP.history,
@@ -1359,7 +1840,8 @@ function saveState() {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const _uid2 = AW_SESSION ? AW_SESSION.userId : 'local';
+    const raw = localStorage.getItem(STORAGE_KEY + '_' + _uid2) || localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const d = JSON.parse(raw);
     if (Array.isArray(d.bikes))   APP.bikes   = d.bikes;
@@ -1567,6 +2049,7 @@ function doUpdateOdometer() {
   bike.km = newKm;
   // Recalculate all item statuses for this bike
   APP.items.filter(i => i.bikeId === bike.id).forEach(i => { i.status = calcStatus(i, newKm); });
+  if (AW_SESSION) syncBikeKm(bike.id, newKm);
   closeModal('odometer');
   showToast(`⚡ Odometer updated to ${newKm.toLocaleString()} km`);
   renderAll();
@@ -2213,8 +2696,15 @@ function saveEditIntervals() {
 
   // Remove any items that were deleted in the editor
   const keptIds = new Set(_eiItems.map(i => i.id));
+  const removedEi = APP.items.filter(i => i.bikeId === _eiBikeId && !keptIds.has(i.id));
   APP.items = APP.items.filter(i => i.bikeId !== _eiBikeId || keptIds.has(i.id));
-
+  if (AW_SESSION) {
+    removedEi.forEach(ri => syncItemDelete(ri.id));
+    APP.items.filter(i => i.bikeId === _eiBikeId).forEach(i => {
+      if (i.id && !i.id.startsWith('ei_')) syncItemUpdate(i);
+      else syncItemCreate(i);
+    });
+  }
   closeModal('editInterval');
   showToast('✓ Service intervals updated!');
   renderAll();
@@ -2345,14 +2835,16 @@ function addBikeStep3() {
   document.getElementById('add-step-3').style.display = '';
   const dot3 = document.getElementById('add-step-dot-3');
   if (dot3) dot3.style.background = 'var(--brand)';
-  const typeDef = BIKE_TYPES[selectedBikeType];
-  _pendingItems = (typeDef ? typeDef.items : []).map((t, idx) => ({
-    _id: 'pi_' + idx, icon: t.i || '🔧', label: t.n,
-    type: t.partType || ('custom_' + idx),
-    km: t.km || 0, days: t.days || 365,
-    note: t.note || '', enabled: true, isCustom: false,
-  }));
-  renderPendingItems();
+  fetchLatestTemplates(selectedBikeType).then(latestItems => {
+    const base = latestItems || (BIKE_TYPES[selectedBikeType] ? BIKE_TYPES[selectedBikeType].items : []);
+    _pendingItems = base.map((t, idx) => ({
+      _id: 'pi_' + idx, icon: t.i || '🔧', label: t.n,
+      type: t.partType || ('custom_' + idx),
+      km: t.km || 0, days: t.days || 365,
+      note: t.note || '', enabled: true, isCustom: false,
+    }));
+    renderPendingItems();
+  });
 }
 
 function addBikeStep2Back() {
@@ -2528,40 +3020,36 @@ function saveProfile() {
 }
 
 (function init() {
-  // Load persisted state (bikes, settings, theme, currency)
-  const hasData = loadState();
-
-  // Apply theme and currency from loaded state
-  document.body.setAttribute('data-theme', currentTheme);
-  ['dark','mid','light'].forEach(t => {
-    document.getElementById('theme-'+t)?.classList.toggle('selected', t === currentTheme);
-  });
-  const sym = { SGD:'S$', MYR:'RM', USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'A$', IDR:'Rp' }[currentCurrency] || currentCurrency;
-  document.querySelectorAll('.currency-display').forEach(el => el.textContent = sym);
-  document.querySelectorAll('.currency-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.code === currentCurrency);
-  });
-
-  // Fill profile fields in Settings page
-  const pn = document.getElementById('profile-name');
-  const pe = document.getElementById('profile-email');
-  if (pn) pn.value = APP.profile.name;
-  if (pe) pe.value = APP.profile.email;
+  // Apply theme immediately to avoid flash
+  const _raw0 = localStorage.getItem(STORAGE_KEY + '_local') || localStorage.getItem(STORAGE_KEY);
+  if (_raw0) {
+    try { const d=JSON.parse(_raw0); if(d.theme){currentTheme=d.theme;document.body.setAttribute('data-theme',d.theme);} if(d.currency)currentCurrency=d.currency; } catch {}
+  }
 
   // Set today's date on dashboard
   const dateEl = document.getElementById('dash-date');
-  if (dateEl) {
-    dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  renderTemplates('naked'); renderTypeSwitcher();
+
+  // Auth-first boot
+  const saved = loadSession();
+  if (saved) {
+    if (isOnline()) {
+      awFetch('GET', '/account', null)
+        .then(account => {
+          saveSession({ ...saved, name: account.name, email: account.email, labels: account.labels || [] });
+          hideAuthOverlay();
+          initAppForUser(AW_SESSION);
+        })
+        .catch(() => { clearSession(); showAuthOverlay(); });
+    } else {
+      hideAuthOverlay();
+      initAppForUser(saved);
+    }
+  } else {
+    showAuthOverlay();
   }
-
-  // Apply profile name everywhere
-  updateNameEverywhere(APP.profile.name);
-  const greetEl = document.getElementById('dash-greeting');
-  if (greetEl) greetEl.textContent = 'Welcome back, ' + APP.profile.name.split(' ')[0];
-
-  renderAll();
-  renderTemplates('naked');
-  renderTypeSwitcher();
 })();
 </script>
 
