@@ -1136,10 +1136,8 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';                  // Database ID 
 // Uses built-in fetch — no SDK needed (avoids CDN compatibility issues)
 async function awFetch(method, path, body, sessionToken) {
   const headers = {
-    'Content-Type':             'application/json',
-    'X-Appwrite-Project':       APPWRITE_PROJECT_ID,
-    'X-SDK-Name':               'MotoMaintain',
-    'X-Appwrite-Response-Format': '1.0.0',
+    'Content-Type':       'application/json',
+    'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
   // Session managed via cookie (credentials:'include') — no manual header needed
 
@@ -1236,10 +1234,10 @@ async function doLogin() {
     hideAuthOverlay();
     await initAppForUser(AW_SESSION);
   } catch (err) {
-    if (err.code === 0)   showAuthError(err.message);
+    if (err.code === 0)        showAuthError(err.message);
     else if (err.code === 401) showAuthError('Incorrect email or password. Please try again.');
     else if (err.code === 429) showAuthError('Too many attempts. Please wait a moment.');
-    else showAuthError(err.message || 'Login failed. Check your connection.');
+    else showAuthError((err.message || 'Login failed.') + (err.code ? ' [' + err.code + ']' : ''));
   } finally {
     setAuthLoading(false);
   }
@@ -1280,7 +1278,7 @@ async function doRegister() {
     return; // success — skip catch block
   } catch (err) {
     if (err.type === 'user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
-    else showAuthError(err.message || 'Registration failed.');
+    else showAuthError((err.message || 'Registration failed.') + (err.code ? ' [' + err.code + ']' : ''));
   } finally {
     setAuthLoading(false);
   }
