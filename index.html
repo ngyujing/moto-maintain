@@ -1139,7 +1139,10 @@ async function awFetch(method, path, body, sessionToken) {
     'Content-Type':       'application/json',
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
-  // Session managed via cookie (credentials:'include') — no manual header needed
+  // Attach session token if available (works cross-domain, no cookie dependency)
+  if (AW_SESSION && AW_SESSION.secret) {
+    headers['X-Appwrite-Session'] = AW_SESSION.secret;
+  }
 
   const opts = { method, headers, credentials: 'include' };
   if (body) opts.body = JSON.stringify(body);
@@ -1230,14 +1233,17 @@ async function doLogin() {
       return;
     }
 
-    // One call: create session. Appwrite sets the cookie automatically.
-    await awFetch('POST', '/account/sessions/email', { email, password: pw });
-    // One call: get account info (name, labels for admin check)
+    // Create session — response contains secret for header-based auth
+    const session = await awFetch('POST', '/account/sessions/email', { email, password: pw });
+    // Temporarily store secret so the next call is authenticated
+    AW_SESSION = { secret: session.secret || '' };
+    // Fetch account info (name, labels for admin check)
     const account = await awFetch('GET', '/account', null);
     saveSession({
       userId:    account.$id,
-      sessionId: '',
-      name:      account.name || email.split('@')[0],
+      sessionId: session.$id    || '',
+      secret:    session.secret || '',
+      name:      account.name   || email.split('@')[0],
       email:     account.email,
       labels:    account.labels || [],
     });
@@ -1275,13 +1281,19 @@ async function doRegister() {
     await awFetch('POST', '/account', {
       userId: 'unique()', name, email, password: pw,
     });
-    // 2. Create session (sets cookie)
-    await awFetch('POST', '/account/sessions/email', { email, password: pw });
+    // 2. Create session — response contains secret for header-based auth
+    const regSession = await awFetch('POST', '/account/sessions/email', { email, password: pw });
+    // Temporarily store secret so the next call is authenticated
+    AW_SESSION = { secret: regSession.secret || '' };
     // 3. Fetch account info
     const acct = await awFetch('GET', '/account', null);
     saveSession({
-      userId: acct.$id, sessionId: '',
-      name: acct.name || name, email: acct.email, labels: acct.labels || [],
+      userId:    acct.$id,
+      sessionId: regSession.$id    || '',
+      secret:    regSession.secret || '',
+      name:      acct.name || name,
+      email:     acct.email,
+      labels:    acct.labels || [],
     });
     clearAuthError();
     hideAuthOverlay();
