@@ -1374,9 +1374,9 @@ async function awList(collection, queries=[]) {
   return awFetch('GET', path, null);
 }
 
-async function awCreate(collection, data) {
+async function awCreate(collection, data, docId) {
   return awFetch('POST', `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents`, {
-    documentId: 'unique()', data, permissions: [],
+    documentId: docId || 'unique()', data, permissions: [],
   });
 }
 
@@ -1463,13 +1463,11 @@ async function initAppForUser(session) {
 async function syncBikeCreate(bike) {
   if (!isOnline() || !AW_SESSION) return;
   try {
-    const doc = await awCreate('motorcycles', {
+    await awCreate('motorcycles', {
       userId: AW_SESSION.userId, make: bike.make, model: bike.model,
       year: bike.year, currentKm: bike.km, nickname: bike.nickname || '',
       color: bike.color || '', vin: bike.vin || '', bikeType: bike.bikeType || 'naked',
-    });
-    // Store the Appwrite doc $id back as bike.id so future updates use it
-    bike.id = doc.$id;
+    }, bike.id);
   } catch (err) { console.warn('syncBikeCreate failed:', err.message); }
 }
 
@@ -1486,15 +1484,14 @@ async function syncBikeKm(bikeId, newKm) {
 async function syncItemCreate(item) {
   if (!isOnline() || !AW_SESSION) return;
   try {
-    const doc = await awCreate('maintenance_items', {
+    await awCreate('maintenance_items', {
       motorcycleId: item.bikeId, userId: AW_SESSION.userId,
       partType: item.partType, partLabel: item.partLabel,
       intervalKm: item.intervalKm, intervalDays: item.intervalDays,
-      lastServiceKm: item.lastKm, lastServiceDate: item.lastDate,
+      lastServiceKm: item.lastKm, lastServiceDate: item.lastDate || null,
       nextDueKm: item.nextKm, nextDueDate: item.nextDate,
       status: item.status, isCustomInterval: item.isCustom || false,
-    });
-    item.id = doc.$id;
+    }, item.id);
   } catch (err) { console.warn('syncItemCreate failed:', err.message); }
 }
 
@@ -1518,14 +1515,13 @@ async function syncItemDelete(itemId) {
 async function syncHistoryCreate(record) {
   if (!isOnline() || !AW_SESSION) return;
   try {
-    const doc = await awCreate('service_records', {
-      motorcycleId: record.bikeId, maintenanceItemId: record.itemId,
+    await awCreate('service_records', {
+      motorcycleId: record.bikeId, maintenanceItemId: record.itemId || record.id,
       userId: AW_SESSION.userId, completedBy: AW_SESSION.userId,
-      partType: record.partType, partLabel: record.partLabel,
+      partType: record.partType || '', partLabel: record.partLabel,
       serviceDate: record.date, mileageAtService: record.km,
       cost: record.cost || null, notes: record.notes || null,
-    });
-    record.id = doc.$id;
+    }, record.id);
   } catch (err) { console.warn('syncHistoryCreate failed:', err.message); }
 }
 
@@ -1760,116 +1756,9 @@ const BIKE_TYPES = {
 // TEMPLATES alias removed — use BIKE_TYPES[activeTemplateType].items directly
 
 // ── Render templates for a given type ──
-function renderTemplates(typeKey) {
-  activeTemplateType = typeKey;
-  const tplEl = document.getElementById('templates-list');
-  const typeInfo = BIKE_TYPES[typeKey];
-  if (!tplEl || !typeInfo) return;
-  tplEl.innerHTML = '';
 
-  // Header
-  const hdr = document.createElement('div');
-  hdr.style.cssText = 'padding:14px 16px 10px;border-bottom:1px solid var(--border)';
-  hdr.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
-    '<span style="font-size:20px">'+typeInfo.icon+'</span>' +
-    '<div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--text)">'+typeInfo.label+'</div>' +
-    '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+typeInfo.source+'</div></div>' +
-    '</div>';
-  tplEl.appendChild(hdr);
 
-  typeInfo.items.forEach((t, idx) => {
-    const row = document.createElement('div');
-    row.className = 'tpl-row';
-    row.dataset.idx = idx;
-    row.innerHTML =
-      '<span class="tpl-icon">'+t.i+'</span>' +
-      '<span class="tpl-name">'+t.n+'</span>' +
-      '<div class="tpl-vals">' +
-        '<div class="tpl-val-display">' +
-          '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:500;color:var(--text2);text-align:right">' +
-            (t.km > 0 ? t.km.toLocaleString()+' km' : '—') +
-          '</div>' +
-          '<div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:right">'+t.days+' days</div>' +
-        '</div>' +
-        '<div class="tpl-edit-fields">' +
-          '<div>' +
-            '<div class="tpl-mini-label">km</div>' +
-            '<input class="tpl-mini-input km-inp" type="number" value="'+t.km+'" min="0" step="500"/>' +
-          '</div>' +
-          '<div>' +
-            '<div class="tpl-mini-label">days</div>' +
-            '<input class="tpl-mini-input days-inp" type="number" value="'+t.days+'" min="1" step="1"/>' +
-          '</div>' +
-        '</div>' +
-        '<button class="btn btn-ghost btn-sm btn-icon tpl-edit-btn edit-icon" onclick="tplEdit('+idx+')" title="Edit">✏️</button>' +
-        '<button class="btn btn-primary btn-sm btn-icon tpl-edit-btn save-icon" onclick="tplSave('+idx+')" title="Save">✓</button>' +
-      '</div>';
-    tplEl.appendChild(row);
-  });
-}
 
-// Render type switcher above the templates card
-function renderTypeSwitcher() {
-  const container = document.getElementById('ov-templates');
-  if (!container) return;
-  const existing = document.getElementById('type-switcher');
-  if (existing) existing.remove();
-  const switcher = document.createElement('div');
-  switcher.id = 'type-switcher';
-  switcher.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:4px';
-  Object.entries(BIKE_TYPES).forEach(([key, t]) => {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-sm ' + (key === activeTemplateType ? 'btn-primary' : 'btn-secondary');
-    btn.style.flexShrink = '0';
-    btn.innerHTML = t.icon + ' ' + t.label.split(' /')[0].trim();
-    btn.onclick = () => { renderTemplates(key); renderTypeSwitcher(); };
-    switcher.appendChild(btn);
-  });
-  const tplCard = document.getElementById('templates-list');
-  if (tplCard) container.insertBefore(switcher, tplCard);
-}
-
-// renderTemplates called in init() below
-
-function tplEdit(idx) {
-  const row = document.querySelector('.tpl-row[data-idx="'+idx+'"]');
-  row.classList.add('editing');
-}
-
-function tplSave(idx) {
-  const row = document.querySelector('.tpl-row[data-idx="'+idx+'"]');
-  const kmVal = parseInt(row.querySelector('.km-inp').value) || 0;
-  const daysVal = parseInt(row.querySelector('.days-inp').value) || 1;
-  // Write back to the live type data
-  const items = BIKE_TYPES[activeTemplateType] ? BIKE_TYPES[activeTemplateType].items : [];
-  if (items[idx]) { items[idx].km = kmVal; items[idx].days = daysVal; }
-  // Update display
-  const disp = row.querySelector('.tpl-val-display');
-  disp.innerHTML =
-    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:500;color:var(--brand);text-align:right">' +
-      (kmVal > 0 ? kmVal.toLocaleString()+' km' : '—') +
-    '</div>' +
-    '<div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:right">'+daysVal+' days</div>';
-  row.classList.remove('editing');
-  const itemName = (BIKE_TYPES[activeTemplateType] && BIKE_TYPES[activeTemplateType].items[idx])
-    ? BIKE_TYPES[activeTemplateType].items[idx].n : 'Item';
-  showToast('✓ ' + itemName + ' interval updated');
-  if (isAdmin()) syncTemplateSave(activeTemplateType, idx, kmVal, daysVal);
-}
-
-// ─── APP STATE ────────────────────────────────────────────────────────────────
-const APP = {
-  bikes: [],
-  items: [],   // maintenance items
-  history: [], // service records
-  nextId: 1,
-  profile: { name: 'Ahmad Razif', email: 'ahmad@example.com' },
-};
-
-let selectedBikeType   = null;
-
-// ─── LOCAL PERSISTENCE ───────────────────────────────────────────────────────
-const STORAGE_KEY = 'motomaintain_v1';
 
 function saveState() {
   try {
@@ -1911,7 +1800,12 @@ let currentTheme       = 'dark';
 let currentCurrency    = 'SGD';
 const CURRENCY_SYMBOLS = { SGD:'S$', MYR:'RM', USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'A$', IDR:'Rp' };
 
-function uid() { return 'id_' + (APP.nextId++); }
+function uid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+}
 
 // ─── MAINTENANCE CALC ────────────────────────────────────────────────────────
 function calcNextDue(lastKm, intervalKm, currentKm) {
@@ -2001,6 +1895,10 @@ function submitAddBike() {
     ? buildItemsFromPending(bike, enabledPending)
     : estimateItemsForBike(bike, selectedBikeType);
   APP.items.push(...newItems);
+  if (AW_SESSION && isOnline()) {
+    syncBikeCreate(bike);
+    newItems.forEach(item => syncItemCreate(item));
+  }
   // Capture values before resetting state
   const itemCount = newItems.length;
   const toastMsg  = `🏍️ ${make} ${model} added! ${itemCount} service items created.`;
@@ -2062,9 +1960,15 @@ function doCompleteService() {
   item.nextDate = nd.toISOString().split('T')[0];
   item.status   = calcStatus(item, bike ? bike.km : km);
   // Add to history
-  APP.history.push({ id: uid(), bikeId: item.bikeId, itemId: item.id,
+  const newRecord = { id: uid(), bikeId: item.bikeId, itemId: item.id,
     partLabel: item.partLabel, partType: item.partType,
-    km, date, cost, notes, completedAt: new Date().toISOString() });
+    km, date, cost, notes, completedAt: new Date().toISOString() };
+  APP.history.push(newRecord);
+  if (AW_SESSION && isOnline()) {
+    syncHistoryCreate(newRecord);
+    syncItemUpdate(item);
+    if (bike && km > bike.km) syncBikeKm(bike.id, km);
+  }
   closeModal('complete');
   showToast(`✓ ${item.partLabel} service recorded!`);
   renderAll();
@@ -2310,9 +2214,16 @@ function renderBikes() {
 
 function deleteBike(bikeId) {
   if (!confirm('Delete this motorcycle and all its maintenance data?')) return;
-  APP.bikes = APP.bikes.filter(b => b.id !== bikeId);
-  APP.items = APP.items.filter(i => i.bikeId !== bikeId);
+  const _dItemIds = APP.items.filter(i => i.bikeId === bikeId).map(i => i.id);
+  const _dHistIds = APP.history.filter(h => h.bikeId === bikeId).map(h => h.id);
+  APP.bikes   = APP.bikes.filter(b => b.id !== bikeId);
+  APP.items   = APP.items.filter(i => i.bikeId !== bikeId);
   APP.history = APP.history.filter(h => h.bikeId !== bikeId);
+  if (AW_SESSION && isOnline()) {
+    syncBikeDelete(bikeId);
+    _dItemIds.forEach(id => syncItemDelete(id));
+    _dHistIds.forEach(id => syncHistoryDelete(id));
+  }
   renderAll();
 }
 
@@ -2509,6 +2420,7 @@ function renderHistory() {
 function deleteServiceRecord(recordId) {
   if (!confirm('Delete this service record?')) return;
   APP.history = APP.history.filter(h => h.id !== recordId);
+  if (AW_SESSION && isOnline()) syncHistoryDelete(recordId);
   renderHistory();
   renderOverview();
   renderDashboard();
