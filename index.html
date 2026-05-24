@@ -615,7 +615,8 @@ select.form-input option{background:var(--s3)}
       </div>
     </div>
 
-    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:16px">
+    <div id="auth-origin-warn" style="display:none;margin-top:14px;padding:10px 14px;border-radius:8px;background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);font-size:12px;line-height:1.5;text-align:left"></div>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:12px">
       Your data is stored securely in Appwrite Cloud.
     </p>
   </div>
@@ -1144,7 +1145,19 @@ async function awFetch(method, path, body, sessionToken) {
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
 
-  const res  = await fetch(APPWRITE_ENDPOINT + path, opts);
+  let res;
+  try {
+    res = await fetch(APPWRITE_ENDPOINT + path, opts);
+  } catch (netErr) {
+    // Network error or CORS block — convert to a readable message
+    const friendly = new Error(
+      window.location.protocol === 'file:'
+        ? 'Cannot connect: open this file via a web server, not file://.'
+        : 'Network error — check your internet connection and that your Appwrite endpoint is correct.'
+    );
+    friendly.code = 0;
+    throw friendly;
+  }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err  = new Error(json.message || 'Request failed');
@@ -1177,7 +1190,18 @@ function isAdmin() {
   return !!(AW_SESSION && AW_SESSION.labels && AW_SESSION.labels.includes('admin'));
 }
 function isOnline() {
+  // file:// protocol cannot make cross-origin fetch requests — treat as offline
+  if (window.location.protocol === 'file:') return false;
   return APPWRITE_PROJECT_ID !== 'your_project_id_here' && APPWRITE_PROJECT_ID !== '';
+}
+
+function getOriginWarning() {
+  if (window.location.protocol === 'file:') {
+    return 'You are opening this file directly. For Appwrite login to work, ' +
+           'serve the file via a local web server (e.g. VS Code Live Server, ' +
+           'npx serve, or Python http.server). Running in offline demo mode.';
+  }
+  return null;
 }
 
 // ─── AUTH FUNCTIONS ───────────────────────────────────────────────────────────
@@ -1188,11 +1212,12 @@ async function doLogin() {
 
   setAuthLoading(true);
   try {
-    // If Appwrite is not configured → offline demo mode
+    // Offline / file:// mode → demo with local storage only
     if (!isOnline()) {
       clearAuthError();
       hideAuthOverlay();
-      initAppForUser({ name: email.split('@')[0], email, labels: [], userId: 'demo' });
+      // Use any existing cached data for this "user"
+      initAppForUser({ name: email.split('@')[0], email, labels: [], userId: btoa(email).replace(/=/g,'') });
       return;
     }
 
@@ -1210,7 +1235,8 @@ async function doLogin() {
     hideAuthOverlay();
     await initAppForUser(AW_SESSION);
   } catch (err) {
-    if (err.code === 401) showAuthError('Incorrect email or password. Please try again.');
+    if (err.code === 0)   showAuthError(err.message);
+    else if (err.code === 401) showAuthError('Incorrect email or password. Please try again.');
     else if (err.code === 429) showAuthError('Too many attempts. Please wait a moment.');
     else showAuthError(err.message || 'Login failed. Check your connection.');
   } finally {
@@ -1231,7 +1257,7 @@ async function doRegister() {
     if (!isOnline()) {
       clearAuthError();
       hideAuthOverlay();
-      initAppForUser({ name, email, labels: [], userId: 'demo' });
+      initAppForUser({ name, email, labels: [], userId: btoa(email).replace(/=/g,'') });
       return;
     }
 
@@ -3049,6 +3075,12 @@ function saveProfile() {
     }
   } else {
     showAuthOverlay();
+  }
+  // Warn if opened via file:// — demo mode will be used automatically
+  const warn = getOriginWarning();
+  if (warn) {
+    const warnEl = document.getElementById('auth-origin-warn');
+    if (warnEl) { warnEl.textContent = '⚠️ ' + warn; warnEl.style.display = ''; }
   }
 })();
 </script>
