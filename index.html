@@ -1922,7 +1922,7 @@ function buildItemsFromPending(bike, pendingItems) {
   });
 }
 
-function submitAddBike() {
+async function submitAddBike() {
   if (!selectedBikeType) { showToast('⚠️ Please select a bike type first'); return; }
   const g = (id) => document.getElementById(id)?.value?.trim() ?? '';
   const make  = g('bike-make');
@@ -1931,34 +1931,68 @@ function submitAddBike() {
   const km    = g('bike-km');
   const nick  = g('bike-nick');
   const color = g('bike-color');
-  if (!make) { showToast('⚠️ Enter the bike make (e.g. Honda)'); return; }
-  if (!model) { showToast('⚠️ Enter the bike model (e.g. CB500F)'); return; }
-  if (!year) { showToast('⚠️ Enter the year'); return; }
+  if (!make)  { showToast('⚠️ Enter the bike make');  return; }
+  if (!model) { showToast('⚠️ Enter the bike model'); return; }
+  if (!year)  { showToast('⚠️ Enter the year');       return; }
   if (km === '') { showToast('⚠️ Enter current odometer (0 if new)'); return; }
+
   const bike = {
     id: uid(), make, model, year: parseInt(year), km: parseInt(km) || 0,
     nickname: nick || '', color: color || '', bikeType: selectedBikeType,
     addedAt: new Date().toISOString(),
   };
-  APP.bikes.push(bike);
+
   const enabledPending = _pendingItems.filter(pi => pi.enabled && pi.label.trim());
   const newItems = enabledPending.length > 0
     ? buildItemsFromPending(bike, enabledPending)
     : estimateItemsForBike(bike, selectedBikeType);
-  APP.items.push(...newItems);
-  if (AW_SESSION && isOnline()) {
-    syncBikeCreate(bike);
-    newItems.forEach(item => syncItemCreate(item));
+
+  // ── Save to Appwrite first, then update local state ──
+  if (isOnline() && AW_SESSION) {
+    const btn = document.querySelector('#add-step-3 .btn-primary');
+    if (btn) { btn.textContent = 'Saving…'; btn.style.pointerEvents = 'none'; }
+    try {
+      await awCreate('motorcycles', {
+        userId: AW_SESSION.userId, make: bike.make, model: bike.model,
+        year: bike.year, currentKm: bike.km,
+        nickname: bike.nickname || '', color: bike.color || '',
+        vin: '', bikeType: bike.bikeType || 'naked',
+      }, bike.id);
+      // Save all items in parallel
+      await Promise.all(newItems.map(item => awCreate('maintenance_items', {
+        motorcycleId:    item.bikeId,
+        userId:          AW_SESSION.userId,
+        partType:        item.partType   || 'custom',
+        partLabel:       item.partLabel,
+        intervalKm:      item.intervalKm  || 0,
+        intervalDays:    item.intervalDays || 365,
+        lastServiceKm:   item.lastKm   ?? null,
+        lastServiceDate: item.lastDate  || null,
+        nextDueKm:       item.nextKm   ?? null,
+        nextDueDate:     item.nextDate  || null,
+        status:          item.status   || 'never_serviced',
+        isCustomInterval: item.isCustom || false,
+      }, item.id)));
+    } catch (err) {
+      if (btn) { btn.textContent = '✓ Add Motorcycle'; btn.style.pointerEvents = ''; }
+      showToast('❌ Could not save to database: ' + (err.message || 'unknown error'));
+      return;
+    }
   }
-  // Capture values before resetting state
-  const itemCount = newItems.length;
-  const toastMsg  = `🏍️ ${make} ${model} added! ${itemCount} service items created.`;
+
+  // ── Only update local state after successful save ──
+  APP.bikes.push(bike);
+  APP.items.push(...newItems);
+
+  const toastMsg = `🏍️ ${make} ${model} added! ${newItems.length} service items created.`;
   closeModal('addBike');
   setTimeout(() => {
     addBikeStep1();
+    const s3 = document.getElementById('add-step-3');
+    if (s3) s3.style.display = 'none';
     document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
     selectedBikeType = null;
-    _pendingItems    = [];
+    _pendingItems = [];
     ['bike-make','bike-model','bike-year','bike-km','bike-nick','bike-color','bike-vin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
@@ -1988,38 +2022,73 @@ function openCompleteModal(itemId) {
   openModal('complete');
 }
 
-function doCompleteService() {
+async function doCompleteService() {
   if (!_completeItemId) return;
   const item = APP.items.find(i => i.id === _completeItemId);
   if (!item) return;
-  const m = document.getElementById('modal-complete');
-  const km    = parseInt(m.querySelector('.complete-km-input').value) || 0;
-  const date  = m.querySelector('.complete-date-input').value;
-  const cost  = parseFloat(m.querySelector('.complete-cost-input').value) || 0;
+  const m    = document.getElementById('modal-complete');
+  const km   = parseInt(m.querySelector('.complete-km-input').value)   || 0;
+  const date = m.querySelector('.complete-date-input').value;
+  const cost = parseFloat(m.querySelector('.complete-cost-input').value) || 0;
   const notes = m.querySelector('.complete-notes-input').value;
   if (!date) { showToast('⚠️ Please enter the service date'); return; }
   if (km <= 0 && item.intervalKm > 0) { showToast('⚠️ Please enter the mileage at service'); return; }
-  // Update bike odometer if higher
+
   const bike = APP.bikes.find(b => b.id === item.bikeId);
-  if (bike && km > bike.km) bike.km = km;
-  // Update item
-  item.lastKm   = km;
-  item.lastDate = date;
-  item.nextKm   = item.intervalKm  > 0 ? km + item.intervalKm  : null;
-  const nd = new Date(date);
-  nd.setDate(nd.getDate() + item.intervalDays);
-  item.nextDate = nd.toISOString().split('T')[0];
-  item.status   = calcStatus(item, bike ? bike.km : km);
-  // Add to history
-  const newRecord = { id: uid(), bikeId: item.bikeId, itemId: item.id,
+
+  // Calculate updated item values
+  const updatedItem = { ...item,
+    lastKm:   km,
+    lastDate: date,
+    nextKm:   item.intervalKm  > 0 ? km + item.intervalKm  : null,
+    nextDate: (() => { const d = new Date(date); d.setDate(d.getDate() + item.intervalDays); return d.toISOString().split('T')[0]; })(),
+  };
+  updatedItem.status = calcStatus(updatedItem, bike ? Math.max(bike.km, km) : km);
+
+  const newRecord = {
+    id: uid(), bikeId: item.bikeId, itemId: item.id,
     partLabel: item.partLabel, partType: item.partType,
-    km, date, cost, notes, completedAt: new Date().toISOString() };
-  APP.history.push(newRecord);
-  if (AW_SESSION && isOnline()) {
-    syncHistoryCreate(newRecord);
-    syncItemUpdate(item);
-    if (bike && km > bike.km) syncBikeKm(bike.id, km);
+    km, date, cost, notes, completedAt: new Date().toISOString(),
+  };
+
+  // ── Save to Appwrite first ──
+  if (isOnline() && AW_SESSION) {
+    const saveBtn = m.querySelector('.btn-primary');
+    if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.style.pointerEvents = 'none'; }
+    try {
+      await awCreate('service_records', {
+        motorcycleId:      newRecord.bikeId,
+        maintenanceItemId: newRecord.itemId,
+        userId:            AW_SESSION.userId,
+        completedBy:       AW_SESSION.userId,
+        partType:          newRecord.partType  || '',
+        partLabel:         newRecord.partLabel,
+        serviceDate:       newRecord.date,
+        mileageAtService:  newRecord.km,
+        cost:              newRecord.cost  || null,
+        notes:             newRecord.notes || null,
+      }, newRecord.id);
+      await awUpdate('maintenance_items', updatedItem.id, {
+        lastServiceKm:   updatedItem.lastKm,
+        lastServiceDate: updatedItem.lastDate,
+        nextDueKm:       updatedItem.nextKm   ?? null,
+        nextDueDate:     updatedItem.nextDate  || null,
+        status:          updatedItem.status,
+      });
+      if (bike && km > bike.km) {
+        await awUpdate('motorcycles', bike.id, { currentKm: km });
+      }
+    } catch (err) {
+      if (saveBtn) { saveBtn.textContent = '✓ Mark Complete'; saveBtn.style.pointerEvents = ''; }
+      showToast('❌ Could not save to database: ' + (err.message || 'error'));
+      return;
+    }
   }
+
+  // ── Update local state after successful save ──
+  Object.assign(item, updatedItem);
+  if (bike && km > bike.km) bike.km = km;
+  APP.history.push(newRecord);
   closeModal('complete');
   showToast(`✓ ${item.partLabel} service recorded!`);
   renderAll();
@@ -2041,7 +2110,7 @@ function openOdometerModal(bikeId) {
   openModal('odometer');
 }
 
-function doUpdateOdometer() {
+async function doUpdateOdometer() {
   if (!_odometerBikeId) return;
   const bike = APP.bikes.find(b => b.id === _odometerBikeId);
   if (!bike) return;
@@ -2049,232 +2118,21 @@ function doUpdateOdometer() {
   const newKm = parseInt(m.querySelector('.odo-km-input').value);
   if (isNaN(newKm)) { showToast('⚠️ Enter a valid km number'); return; }
   if (newKm <= bike.km) { showToast('⚠️ New km must be higher than current (' + bike.km.toLocaleString() + ' km)'); return; }
+
+  // ── Save to Appwrite first ──
+  if (isOnline() && AW_SESSION) {
+    try {
+      await awUpdate('motorcycles', bike.id, { currentKm: newKm });
+    } catch (err) {
+      showToast('❌ Could not update odometer: ' + (err.message || 'error'));
+      return;
+    }
+  }
+
   bike.km = newKm;
-  // Recalculate all item statuses for this bike
   APP.items.filter(i => i.bikeId === bike.id).forEach(i => { i.status = calcStatus(i, newKm); });
-  if (AW_SESSION) syncBikeKm(bike.id, newKm);
   closeModal('odometer');
   showToast(`⚡ Odometer updated to ${newKm.toLocaleString()} km`);
-  renderAll();
-}
-
-// ─── RENDER HELPERS ──────────────────────────────────────────────────────────
-const STATUS_CFG = {
-  overdue:       { cls:'badge-overdue', label:'Overdue',      bar:'var(--red)',   order:0 },
-  due_soon:      { cls:'badge-soon',    label:'Due Soon',     bar:'var(--amber)', order:1 },
-  never_serviced:{ cls:'badge-never',   label:'Never Serviced',bar:'var(--slate)',order:2 },
-  up_to_date:    { cls:'badge-ok',      label:'Up to Date',   bar:'var(--green)', order:3 },
-};
-const ICONS = { engine_oil:'🛢️',oil_filter:'🔧',air_filter:'💨',spark_plugs:'⚡',spark_plug:'⚡',
-  brake_pads_f:'🔴',brake_pads_r:'🔴',brake_fluid:'💧',chain_sprockets:'⛓️',cvt_belt:'⚙️',
-  coolant:'🌡️',tires:'⚫',battery:'🔋',fork_oil:'🛞',valve_clearance:'🔩',
-  drive_belt:'🔗',transmission_oil:'🧴',cvt_rollers:'🔘',primary_chain:'⛽' };
-function icon(partType) { return ICONS[partType] || '🔧'; }
-function fmtKm(n) { return n != null ? n.toLocaleString()+' km' : '—'; }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
-function badge(status) { const s=STATUS_CFG[status]||STATUS_CFG.never_serviced; return `<span class="badge ${s.cls}">${s.label}</span>`; }
-function progress(item, bikeKm) {
-  if (!item.lastKm || !item.nextKm) return '';
-  const pct = Math.min(100, Math.round(((bikeKm - item.lastKm) / (item.nextKm - item.lastKm)) * 100));
-  const col = STATUS_CFG[item.status]?.bar || 'var(--green)';
-  return `<div class="progress-bar" style="margin-top:5px"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>`;
-}
-function getCurrency() {
-  const sym = {'SGD':'S$','MYR':'RM','USD':'$','EUR':'€','GBP':'£','JPY':'¥','AUD':'A$','IDR':'Rp'};
-  return sym[currentCurrency] || currentCurrency;
-}
-
-// ─── RENDER DASHBOARD ────────────────────────────────────────────────────────
-function renderDashboard() {
-  const overdue  = APP.items.filter(i => i.status === 'overdue');
-  const noBikes  = APP.bikes.length === 0;
-
-  // Show/hide empty state vs real content
-  const emptyEl   = document.getElementById('dash-no-bikes');
-  const statsEl   = document.getElementById('dash-stats-grid');
-  const chartEl2  = document.getElementById('dash-charts-row');
-  const overdueHdr2 = document.getElementById('dash-overdue-hdr');
-  const soonHdr2    = document.getElementById('dash-soon-hdr');
-
-  if (emptyEl)    emptyEl.style.display    = noBikes ? '' : 'none';
-  if (statsEl)    statsEl.style.display    = noBikes ? 'none' : '';
-  if (chartEl2)   chartEl2.style.display   = noBikes ? 'none' : '';
-  if (overdueHdr2) overdueHdr2.style.display = noBikes ? 'none' : '';
-  if (soonHdr2)    soonHdr2.style.display   = noBikes ? 'none' : '';
-
-  if (noBikes) return; // nothing else to render
-
-  // Pulse overdue card if needed
-  const ovCard = document.getElementById('dash-overdue-card');
-  const dueSoon  = APP.items.filter(i => i.status === 'due_soon');
-  const ok       = APP.items.filter(i => i.status === 'up_to_date');
-  const totalKm  = APP.bikes.reduce((s,b) => s + b.km, 0);
-  // Stat cards
-  const setEl = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
-  if (ovCard) ovCard.classList.toggle('overdue-pulse', overdue.length > 0);
-  setEl('dash-overdue', overdue.length);
-  setEl('dash-soon',    dueSoon.length);
-  setEl('dash-ok',      ok.length);
-  setEl('dash-km',      totalKm > 1000 ? (totalKm/1000).toFixed(1)+'k' : totalKm);
-  // Badge on nav — only show when there are overdues
-  const nb  = document.getElementById('sidebar-badge');
-  const bnb = document.getElementById('bnav-badge');
-  if (nb)  { nb.textContent  = overdue.length; nb.style.display  = overdue.length ? '' : 'none'; }
-  if (bnb) { bnb.textContent = overdue.length; bnb.style.display = overdue.length ? '' : 'none'; }
-  // Overdue section
-  const overdueEl = document.getElementById('dash-overdue-list');
-  const soonEl    = document.getElementById('dash-soon-list');
-  if (overdueEl) overdueEl.innerHTML = overdue.length === 0 ? '' : overdue.map(item => {
-    const bike = APP.bikes.find(b => b.id === item.bikeId);
-    return `<div class="service-row" onclick="openCompleteModal('${item.id}')">
-      <span class="svc-icon">${icon(item.partType)}</span>
-      <div style="flex:1"><div class="svc-name">${item.partLabel}</div>
-      <div class="svc-meta">${bike ? bike.make+' '+bike.model : ''} · Last: ${fmtKm(item.lastKm)}</div></div>
-      ${badge(item.status)}
-      <div class="svc-right"><div class="km-val">${item.nextKm ? 'Due @ '+fmtKm(item.nextKm) : fmtDate(item.nextDate)}</div></div>
-      <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">✓ Done</button>
-    </div>`;
-  }).join('');
-  const overdueHdr = document.getElementById('dash-overdue-hdr');
-  if (overdueHdr) overdueHdr.style.display = overdue.length ? '' : 'none';
-  if (soonEl) soonEl.innerHTML = dueSoon.length === 0 ? '' : dueSoon.map(item => {
-    const bike = APP.bikes.find(b => b.id === item.bikeId);
-    return `<div class="service-row">
-      <span class="svc-icon">${icon(item.partType)}</span>
-      <div style="flex:1"><div class="svc-name">${item.partLabel}</div>
-      <div class="svc-meta">${bike ? bike.make+' '+bike.model : ''}</div></div>
-      ${badge(item.status)}
-      <div class="svc-right">
-        <div class="km-val">${item.nextKm ? 'Due @ '+fmtKm(item.nextKm) : fmtDate(item.nextDate)}</div>
-        ${progress(item, bike ? bike.km : 0)}
-      </div>
-    </div>`;
-  }).join('');
-  const soonHdr = document.getElementById('dash-soon-hdr');
-  if (soonHdr) soonHdr.style.display = dueSoon.length ? '' : 'none';
-  // No bikes CTA
-  const noEl = document.getElementById('dash-no-bikes');
-  if (noEl) noEl.style.display = APP.bikes.length === 0 ? '' : 'none';
-  // Chart
-  renderDashChart();
-}
-
-function renderDashChart() {
-  const chartEl = document.getElementById('chart-bars');
-  if (!chartEl || APP.bikes.length === 0) { if(chartEl) chartEl.innerHTML=''; return; }
-  const maxVal = Math.max(...APP.bikes.map(b => {
-    const items = APP.items.filter(i => i.bikeId === b.id);
-    return items.length || 1;
-  }), 1);
-  chartEl.innerHTML = APP.bikes.slice(0,5).map(b => {
-    const items = APP.items.filter(i => i.bikeId === b.id);
-    const o = items.filter(i=>i.status==='overdue').length;
-    const s = items.filter(i=>i.status==='due_soon').length;
-    const k = items.filter(i=>i.status==='up_to_date').length;
-    const pct = h => Math.round((h/maxVal)*90);
-    const label = (b.nickname || b.make+' '+b.model).slice(0,10);
-    return `<div class="chart-col">
-      <div class="chart-bar-wrap">
-        <div class="bar" style="height:${pct(o)}px;background:var(--red);opacity:.85"></div>
-        <div class="bar" style="height:${pct(s)}px;background:var(--amber);opacity:.85"></div>
-        <div class="bar" style="height:${pct(k)}px;background:var(--green);opacity:.85"></div>
-      </div>
-      <div class="chart-label">${label}</div>
-    </div>`;
-  }).join('');
-  // Donut
-  const total = APP.items.length || 1;
-  const oCount = APP.items.filter(i=>i.status==='overdue').length;
-  const sCount = APP.items.filter(i=>i.status==='due_soon').length;
-  const kCount = APP.items.filter(i=>i.status==='up_to_date').length;
-  const circ = 2 * Math.PI * 36;
-  const oArc = circ * (oCount/total);
-  const sArc = circ * (sCount/total);
-  const kArc = circ * (kCount/total);
-  const donutEl = document.getElementById('dash-donut');
-  if (donutEl) {
-    const off = -(circ * 0.25);
-    donutEl.innerHTML = `
-      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--s4)" stroke-width="10"/>
-      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--green)" stroke-width="10"
-        stroke-dasharray="${kArc} ${circ-kArc}" stroke-dashoffset="${off}" stroke-linecap="round"/>
-      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--amber)" stroke-width="10"
-        stroke-dasharray="${sArc} ${circ-sArc}" stroke-dashoffset="${off - kArc}" stroke-linecap="round"/>
-      <circle cx="45" cy="45" r="36" fill="none" stroke="var(--red)" stroke-width="10"
-        stroke-dasharray="${oArc} ${circ-oArc}" stroke-dashoffset="${off - kArc - sArc}" stroke-linecap="round"/>
-      <text x="45" y="41" text-anchor="middle" font-family="Exo 2,sans-serif" font-size="13" font-weight="800" fill="var(--text)">${total}</text>
-      <text x="45" y="55" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9" fill="var(--text3)">items</text>`;
-    const lgEl = document.getElementById('dash-donut-legend');
-    if (lgEl) lgEl.innerHTML = [
-      ['var(--green)', 'Up to Date', kCount],
-      ['var(--amber)', 'Due Soon',   sCount],
-      ['var(--red)',   'Overdue',    oCount],
-    ].map(([col,lbl,cnt]) => `<div class="legend-row"><span class="legend-dot" style="background:${col}"></span>${lbl}<strong style="margin-left:auto;color:var(--text)">${cnt}</strong></div>`).join('');
-  }
-}
-
-// ─── RENDER BIKES ────────────────────────────────────────────────────────────
-function renderBikes() {
-  const grid = document.getElementById('bike-grid');
-  const sub  = document.getElementById('bikes-sub');
-  if (!grid) return;
-  if (sub) sub.textContent = APP.bikes.length + ' bike' + (APP.bikes.length !== 1 ? 's' : '') + ' registered';
-  if (APP.bikes.length === 0) {
-    grid.innerHTML = `<div class="bike-card" style="border-style:dashed;opacity:.5;display:flex;align-items:center;justify-content:center;min-height:220px;cursor:pointer" onclick="openModal('addBike')">
-      <div style="text-align:center"><div style="font-size:32px;margin-bottom:8px">＋</div>
-      <div style="font-family:'Exo 2',sans-serif;font-weight:700;font-size:13px;color:var(--text3)">Add Your First Motorcycle</div></div></div>`;
-    return;
-  }
-  const GRAD = { sport:'linear-gradient(90deg,#ef4444,#f97316)', naked:'linear-gradient(90deg,#f97316,#f59e0b)',
-    adventure:'linear-gradient(90deg,#22c55e,#06b6d4)', cruiser:'linear-gradient(90deg,#a855f7,#6366f1)',
-    scooter:'linear-gradient(90deg,#38bdf8,#06b6d4)', offroad:'linear-gradient(90deg,#f59e0b,#84cc16)' };
-  grid.innerHTML = APP.bikes.map(b => {
-    const items = APP.items.filter(i => i.bikeId === b.id);
-    const ov = items.filter(i=>i.status==='overdue').length;
-    const so = items.filter(i=>i.status==='due_soon').length;
-    const ok = items.filter(i=>i.status==='up_to_date'||i.status==='never_serviced').length;
-    const grad = GRAD[b.bikeType] || GRAD.naked;
-    return `<div class="bike-card">
-      <div class="bike-top" style="background:${grad}"></div>
-      <div class="bike-body" style="cursor:pointer" onclick="openBikeDetail('${b.id}')">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div><div class="bike-name">${b.make} ${b.model}</div>
-          <div class="bike-year">${b.year}${b.color?' · '+b.color:''}${b.nickname?' · "'+b.nickname+'"':''}</div></div>
-          <span style="font-size:22px">🏍️</span>
-        </div>
-        <div class="bike-km"><span style="font-size:14px">⚡</span>
-          <span class="bike-km-val">${b.km.toLocaleString()} km</span>
-          <span style="font-size:10px;color:var(--text3);margin-left:auto">odometer</span></div>
-        <div class="bike-stats">
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--red)">${ov}</div><div class="bike-stat-lbl">Overdue</div></div>
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--amber)">${so}</div><div class="bike-stat-lbl">Due Soon</div></div>
-          <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--green)">${ok}</div><div class="bike-stat-lbl">OK</div></div>
-        </div>
-      </div>
-      <div class="bike-actions">
-        <button class="btn btn-primary btn-sm" style="flex:1" onclick="openBikeDetail('${b.id}')">View Details</button>
-        <button class="btn btn-secondary btn-sm" onclick="openOdometerModal('${b.id}')" title="Update km">⚡</button>
-        <button class="btn btn-secondary btn-sm" onclick="openEditIntervals('${b.id}')" title="Edit intervals">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteBike('${b.id}')" title="Delete">🗑</button>
-      </div>
-    </div>`;
-  }).join('') + `<div class="bike-card" style="border-style:dashed;opacity:.4;display:flex;align-items:center;justify-content:center;min-height:220px;cursor:pointer" onclick="openModal('addBike')">
-    <div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">＋</div>
-    <div style="font-family:'Exo 2',sans-serif;font-weight:700;font-size:12px;color:var(--text3)">Add Motorcycle</div></div></div>`;
-}
-
-function deleteBike(bikeId) {
-  if (!confirm('Delete this motorcycle and all its maintenance data?')) return;
-  const _dItemIds = APP.items.filter(i => i.bikeId === bikeId).map(i => i.id);
-  const _dHistIds = APP.history.filter(h => h.bikeId === bikeId).map(h => h.id);
-  APP.bikes   = APP.bikes.filter(b => b.id !== bikeId);
-  APP.items   = APP.items.filter(i => i.bikeId !== bikeId);
-  APP.history = APP.history.filter(h => h.bikeId !== bikeId);
-  if (AW_SESSION && isOnline()) {
-    syncBikeDelete(bikeId);
-    _dItemIds.forEach(id => syncItemDelete(id));
-    _dHistIds.forEach(id => syncHistoryDelete(id));
-  }
   renderAll();
 }
 
@@ -2468,13 +2326,18 @@ function renderHistory() {
   }).join('')}</div>`;
 }
 
-function deleteServiceRecord(recordId) {
+async function deleteServiceRecord(recordId) {
   if (!confirm('Delete this service record?')) return;
+  if (isOnline() && AW_SESSION) {
+    try {
+      await awDelete('service_records', recordId);
+    } catch (err) {
+      showToast('❌ Could not delete record: ' + (err.message || 'error'));
+      return;
+    }
+  }
   APP.history = APP.history.filter(h => h.id !== recordId);
-  if (AW_SESSION && isOnline()) syncHistoryDelete(recordId);
-  renderHistory();
-  renderOverview();
-  renderDashboard();
+  renderHistory(); renderOverview(); renderDashboard();
   showToast('🗑 Service record deleted');
 }
 
@@ -2639,87 +2502,82 @@ function addEiRow() {
   if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
 }
 
-function saveEditIntervals() {
-  // Validate: every item must have a label
+async function saveEditIntervals() {
   const invalid = _eiItems.find(i => !i.partLabel || !i.partLabel.trim());
   if (invalid) { showToast('⚠️ All items need a name'); return; }
-
   const bike = APP.bikes.find(b => b.id === _eiBikeId);
   if (!bike) { closeModal('editInterval'); return; }
 
-  // Recalculate nextKm/nextDate for any items whose interval changed,
-  // and recompute status based on current bike km
+  const saveBtn = document.querySelector('#modal-editInterval .btn-primary');
+  if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.style.pointerEvents = 'none'; }
+
+  const keptIds = new Set(_eiItems.map(i => i.id));
+  const removedItems = APP.items.filter(i => i.bikeId === _eiBikeId && !keptIds.has(i.id));
+
+  // Build updated item objects
+  const updatedItems = [];
+  const newItems = [];
   _eiItems.forEach(edited => {
+    const kmInt  = edited.intervalKm  || 0;
+    const dayInt = edited.intervalDays || 365;
     const existing = APP.items.find(i => i.id === edited.id);
     if (existing) {
-      // Interval may have changed — recalculate nextKm/nextDate from lastKm/lastDate
-      existing.partLabel   = edited.partLabel.trim();
-      existing.intervalKm  = edited.intervalKm;
-      existing.intervalDays= edited.intervalDays;
-      existing.isCustom    = edited.isCustom;
-
-      // Recalculate next due
-      if (existing.intervalKm > 0 && existing.lastKm !== null) {
-        existing.nextKm = existing.lastKm + existing.intervalKm;
-      } else if (existing.intervalKm > 0 && bike.km > 0) {
-        existing.lastKm = Math.floor(bike.km / existing.intervalKm) * existing.intervalKm;
-        existing.nextKm = existing.lastKm + existing.intervalKm;
-      }
-      if (existing.lastDate) {
-        const nd = new Date(existing.lastDate);
-        nd.setDate(nd.getDate() + existing.intervalDays);
-        existing.nextDate = nd.toISOString().split('T')[0];
-      } else {
-        const nd = new Date();
-        nd.setDate(nd.getDate() + existing.intervalDays);
-        existing.nextDate = nd.toISOString().split('T')[0];
-      }
-      existing.status = calcStatus(existing, bike.km);
+      let nextKm = existing.nextKm, nextDate = existing.nextDate;
+      if (kmInt > 0 && existing.lastKm !== null) nextKm = existing.lastKm + kmInt;
+      else if (kmInt > 0 && bike.km > 0) { existing.lastKm = Math.floor(bike.km / kmInt) * kmInt; nextKm = existing.lastKm + kmInt; }
+      if (existing.lastDate) { const nd = new Date(existing.lastDate); nd.setDate(nd.getDate() + dayInt); nextDate = nd.toISOString().split('T')[0]; }
+      else { const nd = new Date(); nd.setDate(nd.getDate() + dayInt); nextDate = nd.toISOString().split('T')[0]; }
+      const upd = { ...existing, partLabel: edited.partLabel.trim(), intervalKm: kmInt, intervalDays: dayInt, nextKm, nextDate, isCustom: edited.isCustom };
+      upd.status = calcStatus(upd, bike.km);
+      updatedItems.push(upd);
     } else {
-      // Newly added item — recalculate from scratch
-      const kmInt = edited.intervalKm || 0;
-      const dayInt = edited.intervalDays || 365;
       let lastKm = null, nextKm = null;
-      if (kmInt > 0 && bike.km > 0) {
-        lastKm = Math.floor(bike.km / kmInt) * kmInt;
-        nextKm = lastKm + kmInt;
-      }
-      const nd = new Date();
-      nd.setDate(nd.getDate() + dayInt);
-      const newItem = {
-        id:           edited.id,
-        bikeId:       _eiBikeId,
-        partType:     edited.partType,
-        partLabel:    edited.partLabel.trim(),
-        intervalKm:   kmInt,
-        intervalDays: dayInt,
-        lastKm,
-        lastDate:     null,
-        nextKm,
-        nextDate:     nd.toISOString().split('T')[0],
-        note:         '',
-        isCustom:     true,
-      };
-      newItem.status = calcStatus(newItem, bike.km);
-      APP.items.push(newItem);
+      if (kmInt > 0 && bike.km > 0) { lastKm = Math.floor(bike.km / kmInt) * kmInt; nextKm = lastKm + kmInt; }
+      const nd = new Date(); nd.setDate(nd.getDate() + dayInt);
+      const ni = { id: edited.id, bikeId: _eiBikeId, partType: edited.partType || ('custom_' + uid()),
+        partLabel: edited.partLabel.trim(), intervalKm: kmInt, intervalDays: dayInt,
+        lastKm, lastDate: null, nextKm, nextDate: nd.toISOString().split('T')[0], note: '', isCustom: true };
+      ni.status = calcStatus(ni, bike.km);
+      newItems.push(ni);
     }
   });
 
-  // Remove any items that were deleted in the editor
-  const keptIds = new Set(_eiItems.map(i => i.id));
-  const removedEi = APP.items.filter(i => i.bikeId === _eiBikeId && !keptIds.has(i.id));
-  APP.items = APP.items.filter(i => i.bikeId !== _eiBikeId || keptIds.has(i.id));
-  if (AW_SESSION) {
-    removedEi.forEach(ri => syncItemDelete(ri.id));
-    APP.items.filter(i => i.bikeId === _eiBikeId).forEach(i => {
-      if (i.id && !i.id.startsWith('ei_')) syncItemUpdate(i);
-      else syncItemCreate(i);
-    });
+  // ── Save to Appwrite first ──
+  if (isOnline() && AW_SESSION) {
+    try {
+      await Promise.all([
+        ...removedItems.map(i => awDelete('maintenance_items', i.id)),
+        ...updatedItems.map(i => awUpdate('maintenance_items', i.id, {
+          partLabel: i.partLabel, intervalKm: i.intervalKm, intervalDays: i.intervalDays,
+          lastServiceKm: i.lastKm ?? null, lastServiceDate: i.lastDate || null,
+          nextDueKm: i.nextKm ?? null, nextDueDate: i.nextDate || null,
+          status: i.status, isCustomInterval: i.isCustom || false,
+        })),
+        ...newItems.map(i => awCreate('maintenance_items', {
+          motorcycleId: i.bikeId, userId: AW_SESSION.userId,
+          partType: i.partType, partLabel: i.partLabel,
+          intervalKm: i.intervalKm, intervalDays: i.intervalDays,
+          lastServiceKm: i.lastKm ?? null, lastServiceDate: null,
+          nextDueKm: i.nextKm ?? null, nextDueDate: i.nextDate || null,
+          status: i.status, isCustomInterval: true,
+        }, i.id)),
+      ]);
+    } catch (err) {
+      if (saveBtn) { saveBtn.textContent = '✓ Save Changes'; saveBtn.style.pointerEvents = ''; }
+      showToast('❌ Could not save intervals: ' + (err.message || 'error'));
+      return;
+    }
   }
+
+  // ── Update local state ──
+  APP.items = APP.items.filter(i => i.bikeId !== _eiBikeId || keptIds.has(i.id));
+  updatedItems.forEach(upd => { const idx = APP.items.findIndex(i => i.id === upd.id); if (idx >= 0) APP.items[idx] = upd; });
+  newItems.forEach(ni => APP.items.push(ni));
   closeModal('editInterval');
   showToast('✓ Service intervals updated!');
   renderAll();
 }
+
 
 // ─── RENDER ALL ──────────────────────────────────────────────────────────────
 function renderAll() {
@@ -3073,7 +2931,30 @@ function saveProfile() {
     const warnEl = document.getElementById('auth-origin-warn');
     if (warnEl) { warnEl.textContent = '⚠️ ' + warn; warnEl.style.display = ''; }
   }
-})();
+})();async function deleteBike(bikeId) {
+  if (!confirm('Delete this motorcycle and all its maintenance data?')) return;
+  const delItemIds = APP.items.filter(i => i.bikeId === bikeId).map(i => i.id);
+  const delHistIds = APP.history.filter(h => h.bikeId === bikeId).map(h => h.id);
+
+  if (isOnline() && AW_SESSION) {
+    try {
+      await Promise.all([
+        awDelete('motorcycles', bikeId),
+        ...delItemIds.map(id => awDelete('maintenance_items', id)),
+        ...delHistIds.map(id => awDelete('service_records', id)),
+      ]);
+    } catch (err) {
+      showToast('❌ Could not delete from database: ' + (err.message || 'error'));
+      return;
+    }
+  }
+  APP.bikes   = APP.bikes.filter(b => b.id !== bikeId);
+  APP.items   = APP.items.filter(i => i.bikeId !== bikeId);
+  APP.history = APP.history.filter(h => h.bikeId !== bikeId);
+  renderAll();
+  showToast('🗑 Motorcycle deleted');
+}
+
 </script>
 
 <!-- MOBILE BOTTOM NAV -->
