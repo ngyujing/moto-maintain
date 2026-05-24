@@ -596,7 +596,7 @@ select.form-input option{background:var(--s3)}
       <div id="form-register" style="display:none">
         <div class="form-group" style="margin-bottom:12px">
           <label class="form-label">Full Name</label>
-          <input id="reg-name" type="text" class="form-input" placeholder="Ahmad Razif"
+          <input id="reg-name" type="text" class="form-input" placeholder="Your full name"
             onkeydown="if(event.key==='Enter')doRegister()"/>
         </div>
         <div class="form-group" style="margin-bottom:12px">
@@ -710,9 +710,9 @@ select.form-input option{background:var(--s3)}
   </div>
   <div class="sidebar-footer">
     <div class="user-row">
-      <div class="avatar" id="sidebar-avatar">AR</div>
+      <div class="avatar" id="sidebar-avatar">?</div>
       <div>
-        <div class="user-name" id="sidebar-user-name">Ahmad Razif</div>
+        <div class="user-name" id="sidebar-user-name">—</div>
         <div class="user-role" id="sidebar-user-role">🏍️ Rider</div>
       </div>
     </div>
@@ -980,8 +980,8 @@ select.form-input option{background:var(--s3)}
     <div class="settings-desc">Your profile details.</div>
     <div class="card" style="padding:20px">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">Full Name</label><input id="profile-name" class="form-input" value="Ahmad Razif" oninput="previewNameChange(this.value)"/></div>
-        <div class="form-group"><label class="form-label">Email</label><input id="profile-email" class="form-input" value="ahmad@example.com"/></div>
+        <div class="form-group"><label class="form-label">Full Name</label><input id="profile-name" class="form-input" value="" oninput="previewNameChange(this.value)"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input id="profile-email" class="form-input" value=""/></div>
         <div class="form-group full"><label class="form-label">New Password</label><input id="profile-pw" class="form-input" type="password" placeholder="Leave blank to keep current"/></div>
       </div>
       <div style="margin-top:16px;display:flex;gap:10px">
@@ -1418,7 +1418,10 @@ async function awDelete(collection, docId) {
 
 // ─── USER DATA BOOTSTRAP ──────────────────────────────────────────────────────
 async function initAppForUser(session) {
-  APP.profile = { name: session.name, email: session.email };
+  APP.profile = {
+    name:  session.name  || (session.email ? session.email.split('@')[0] : 'Rider'),
+    email: session.email || '',
+  };
 
   // Show/hide Templates tab based on admin role
   const tplTab = document.getElementById('tab-templates');
@@ -2855,7 +2858,7 @@ function getInitials(name) {
 }
 
 function updateNameEverywhere(name) {
-  // Sidebar name + avatar
+  name = name || 'Rider';
   const nameEl   = document.getElementById('sidebar-user-name');
   const avatarEl = document.getElementById('sidebar-avatar');
   if (nameEl)   nameEl.textContent   = name;
@@ -2901,6 +2904,9 @@ function saveProfile() {
   APP.profile.email = email;
   updateNameEverywhere(name);
   saveState();
+  if (isOnline() && AW_SESSION) {
+    awFetch('PATCH', '/account/name', { name }).catch(() => {});
+  }
   showToast('✓ Profile saved!');
 }
 
