@@ -1371,9 +1371,9 @@ function switchAuthTab(tab) {
 // Appwrite REST query builder — produces URL-encoded query strings
 // Format: queries[]={"method":"equal","attribute":"userId","values":["abc"]}
 const Q = {
-  equal:     (k, v) => JSON.stringify({ method: 'equal',     attribute: k, values: [v]   }),
-  orderDesc: (k)    => JSON.stringify({ method: 'orderDesc', attribute: k, values: []    }),
-  limit:     (n)    => JSON.stringify({ method: 'limit',     values: [n]                 }),
+  equal:     (k, v) => `equal("${k}", "${v}")`,
+  orderDesc: (k)    => `orderDesc("${k}")`,
+  limit:     (n)    => `limit(${n})`,
 };
 
 function awQuery(queries) {
@@ -1473,14 +1473,25 @@ async function initAppForUser(session) {
 // Called alongside localStorage saves when online
 
 async function syncBikeCreate(bike) {
-  if (!isOnline() || !AW_SESSION) return;
+  if (!isOnline() || !AW_SESSION) return false;
   try {
     await awCreate('motorcycles', {
-      userId: AW_SESSION.userId, make: bike.make, model: bike.model,
-      year: bike.year, currentKm: bike.km, nickname: bike.nickname || '',
-      color: bike.color || '', vin: bike.vin || '', bikeType: bike.bikeType || 'naked',
+      userId:    AW_SESSION.userId,
+      make:      bike.make,
+      model:     bike.model,
+      year:      bike.year,
+      currentKm: bike.km,
+      nickname:  bike.nickname || '',
+      color:     bike.color    || '',
+      vin:       bike.vin      || '',
+      bikeType:  bike.bikeType || 'naked',
     }, bike.id);
-  } catch (err) { console.warn('syncBikeCreate failed:', err.message); }
+    return true;
+  } catch (err) {
+    console.error('syncBikeCreate failed:', err.message, 'code:', err.code);
+    showToast('⚠️ Bike not saved to cloud: ' + (err.message || 'error'));
+    return false;
+  }
 }
 
 async function syncBikeDelete(bikeId) {
@@ -1496,27 +1507,41 @@ async function syncBikeKm(bikeId, newKm) {
 async function syncItemCreate(item) {
   if (!isOnline() || !AW_SESSION) return;
   try {
-    await awCreate('maintenance_items', {
-      motorcycleId: item.bikeId, userId: AW_SESSION.userId,
-      partType: item.partType, partLabel: item.partLabel,
-      intervalKm: item.intervalKm, intervalDays: item.intervalDays,
-      lastServiceKm: item.lastKm, lastServiceDate: item.lastDate || null,
-      nextDueKm: item.nextKm, nextDueDate: item.nextDate,
-      status: item.status, isCustomInterval: item.isCustom || false,
-    }, item.id);
-  } catch (err) { console.warn('syncItemCreate failed:', err.message); }
+    const itemData = {
+      motorcycleId:    item.bikeId,
+      userId:          AW_SESSION.userId,
+      partType:        item.partType   || 'custom',
+      partLabel:       item.partLabel,
+      intervalKm:      item.intervalKm  || 0,
+      intervalDays:    item.intervalDays || 365,
+      lastServiceKm:   item.lastKm   ?? null,
+      lastServiceDate: item.lastDate  || null,
+      nextDueKm:       item.nextKm   ?? null,
+      nextDueDate:     item.nextDate  || null,
+      status:          item.status   || 'never_serviced',
+      isCustomInterval: item.isCustom || false,
+    };
+    await awCreate('maintenance_items', itemData, item.id);
+  } catch (err) {
+    console.error('syncItemCreate failed:', err.message, err.code);
+    showToast('⚠️ Service item not saved: ' + (err.message || 'error'));
+  }
 }
 
 async function syncItemUpdate(item) {
   if (!isOnline() || !AW_SESSION) return;
   try {
     await awUpdate('maintenance_items', item.id, {
-      intervalKm: item.intervalKm, intervalDays: item.intervalDays,
-      lastServiceKm: item.lastKm, lastServiceDate: item.lastDate,
-      nextDueKm: item.nextKm, nextDueDate: item.nextDate,
-      status: item.status, isCustomInterval: item.isCustom || false,
+      intervalKm:      item.intervalKm   || 0,
+      intervalDays:    item.intervalDays  || 365,
+      lastServiceKm:   item.lastKm    ?? null,
+      lastServiceDate: item.lastDate   || null,
+      nextDueKm:       item.nextKm    ?? null,
+      nextDueDate:     item.nextDate   || null,
+      status:          item.status    || 'never_serviced',
+      isCustomInterval: item.isCustom || false,
     });
-  } catch (err) { console.warn('syncItemUpdate failed:', err.message); }
+  } catch (err) { console.error('syncItemUpdate failed:', err.message, err.code); }
 }
 
 async function syncItemDelete(itemId) {
@@ -1802,6 +1827,20 @@ function loadState() {
     if (d.currency) { currentCurrency = d.currency; }
     return true;
   } catch(e) { console.warn('MotoMaintain: load failed', e); return false; }
+}
+
+function loadThemeOnly() {
+  const keys = ['local', AW_SESSION && AW_SESSION.userId].filter(Boolean);
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY + '_' + k) || (k==='local' ? localStorage.getItem(STORAGE_KEY) : null);
+      if (!raw) continue;
+      const d = JSON.parse(raw);
+      if (d.theme)    { currentTheme = d.theme; document.body.setAttribute('data-theme', d.theme); }
+      if (d.currency) { currentCurrency = d.currency; }
+      return;
+    } catch {}
+  }
 }
 
 function clearState() {
@@ -2992,11 +3031,7 @@ function saveProfile() {
 }
 
 (function init() {
-  // Apply theme immediately to avoid flash
-  const _raw0 = localStorage.getItem(STORAGE_KEY + '_local') || localStorage.getItem(STORAGE_KEY);
-  if (_raw0) {
-    try { const d=JSON.parse(_raw0); if(d.theme){currentTheme=d.theme;document.body.setAttribute('data-theme',d.theme);} if(d.currency)currentCurrency=d.currency; } catch {}
-  }
+  loadThemeOnly(); // apply saved theme before auth
 
   // Set today's date on dashboard
   const dateEl = document.getElementById('dash-date');
