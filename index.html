@@ -1139,10 +1139,11 @@ async function awFetch(method, path, body, sessionToken) {
     'Content-Type':             'application/json',
     'X-Appwrite-Project':       APPWRITE_PROJECT_ID,
     'X-SDK-Name':               'MotoMaintain',
+    'X-Appwrite-Response-Format': '1.0.0',
   };
-  if (sessionToken) headers['X-Appwrite-Session'] = sessionToken;
+  // Session managed via cookie (credentials:'include') — no manual header needed
 
-  const opts = { method, headers };
+  const opts = { method, headers, credentials: 'include' };
   if (body) opts.body = JSON.stringify(body);
 
   let res;
@@ -1261,14 +1262,22 @@ async function doRegister() {
       return;
     }
 
-    // 1. Create account
+    // 1. Create Appwrite account
     await awFetch('POST', '/account', {
       userId: 'unique()', name, email, password: pw,
     });
-    // 2. Auto-login
-    document.getElementById('login-email').value = email;
-    document.getElementById('login-pw').value    = pw;
-    await doLogin();
+    // 2. Create session (sets cookie)
+    await awFetch('POST', '/account/sessions/email', { email, password: pw });
+    // 3. Fetch account info
+    const acct = await awFetch('GET', '/account', null);
+    saveSession({
+      userId: acct.$id, sessionId: '',
+      name: acct.name || name, email: acct.email, labels: acct.labels || [],
+    });
+    clearAuthError();
+    hideAuthOverlay();
+    await initAppForUser(AW_SESSION);
+    return; // success — skip catch block
   } catch (err) {
     if (err.type === 'user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
     else showAuthError(err.message || 'Registration failed.');
@@ -1281,6 +1290,8 @@ async function doLogout() {
   if (isOnline() && AW_SESSION) {
     try { await awFetch('DELETE', '/account/sessions/current', null); } catch {}
   }
+  // Clear Appwrite session cookie
+  document.cookie = 'a_session_' + APPWRITE_PROJECT_ID + '=; Max-Age=0; path=/; SameSite=None; Secure';
   clearSession();
   // Reset app state
   APP.bikes   = [];
@@ -1336,19 +1347,21 @@ function switchAuthTab(tab) {
 }
 
 // ─── APPWRITE DATA LAYER ──────────────────────────────────────────────────────
+// Appwrite REST query builder — produces URL-encoded query strings
+// Format: queries[]={"method":"equal","attribute":"userId","values":["abc"]}
 const Q = {
-  equal:   (k,v)  => `equal("${k}","${v}")`,
-  orderDesc: (k)  => `orderDesc("${k}")`,
-  limit:   (n)    => `limit(${n})`,
+  equal:     (k, v) => JSON.stringify({ method: 'equal',     attribute: k, values: [v]   }),
+  orderDesc: (k)    => JSON.stringify({ method: 'orderDesc', attribute: k, values: []    }),
+  limit:     (n)    => JSON.stringify({ method: 'limit',     values: [n]                 }),
 };
 
 function awQuery(queries) {
-  return queries.map(q => `queries[]=${encodeURIComponent(q)}`).join('&');
+  return queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&');
 }
 
 async function awList(collection, queries=[]) {
   const qs = awQuery(queries);
-  const path = `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents${qs ? '?'+qs : ''}`;
+  const path = `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents${qs ? '?' + qs : ''}`;
   return awFetch('GET', path, null);
 }
 
@@ -3062,13 +3075,18 @@ function saveProfile() {
   const saved = loadSession();
   if (saved) {
     if (isOnline()) {
+      // GET /account works if Appwrite session cookie is still valid
       awFetch('GET', '/account', null)
         .then(account => {
           saveSession({ ...saved, name: account.name, email: account.email, labels: account.labels || [] });
           hideAuthOverlay();
           initAppForUser(AW_SESSION);
         })
-        .catch(() => { clearSession(); showAuthOverlay(); });
+        .catch(() => {
+          // Cookie expired — force re-login
+          clearSession();
+          showAuthOverlay();
+        });
     } else {
       hideAuthOverlay();
       initAppForUser(saved);
