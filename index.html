@@ -1233,7 +1233,10 @@ async function doLogin() {
       return;
     }
 
-    // Create session — response contains secret for header-based auth
+    // Delete any stale session first (prevents "session already active" error)
+    try { await awFetch('DELETE', '/account/sessions/current', null); } catch {}
+
+    // Create new session
     const session = await awFetch('POST', '/account/sessions/email', { email, password: pw });
     // Temporarily store secret so the next call is authenticated
     AW_SESSION = { secret: session.secret || '' };
@@ -1251,10 +1254,22 @@ async function doLogin() {
     hideAuthOverlay();
     await initAppForUser(AW_SESSION);
   } catch (err) {
-    if (err.code === 0)        showAuthError(err.message);
-    else if (err.code === 401) showAuthError('Incorrect email or password. Please try again.');
-    else if (err.code === 429) showAuthError('Rate limit reached — Appwrite blocks repeated login attempts for security. Wait 15–30 minutes then try again. This is an Appwrite limit, not a password issue.');
-    else showAuthError((err.message || 'Login failed.') + (err.code ? ' [' + err.code + ']' : ''));
+    if (err.code === 0) {
+      showAuthError(err.message);
+    } else if (err.code === 401) {
+      if (err.message && err.message.toLowerCase().includes('session')) {
+        // Stale session conflict — clear and ask user to try again
+        try { await awFetch('DELETE', '/account/sessions/current', null); } catch {}
+        clearSession();
+        showAuthError('Session conflict cleared. Please try signing in again.');
+      } else {
+        showAuthError('Incorrect email or password. Please try again.');
+      }
+    } else if (err.code === 429) {
+      showAuthError('Too many attempts. Please wait 15–30 minutes and try again.');
+    } else {
+      showAuthError((err.message || 'Login failed.') + (err.code ? ' [' + err.code + ']' : ''));
+    }
   } finally {
     setAuthLoading(false);
   }
@@ -1281,7 +1296,8 @@ async function doRegister() {
     await awFetch('POST', '/account', {
       userId: 'unique()', name, email, password: pw,
     });
-    // 2. Create session — response contains secret for header-based auth
+    // 2. Delete any existing session, then create new one
+    try { await awFetch('DELETE', '/account/sessions/current', null); } catch {}
     const regSession = await awFetch('POST', '/account/sessions/email', { email, password: pw });
     // Temporarily store secret so the next call is authenticated
     AW_SESSION = { secret: regSession.secret || '' };
@@ -2897,33 +2913,36 @@ function saveProfile() {
 
   renderTemplates('naked'); renderTypeSwitcher();
 
-  // Auth-first boot
+  // Auth-first boot — always check Appwrite for an active session.
+  // A valid cookie may exist even if localStorage has no saved session.
+  if (!isOnline()) {
+    const saved = loadSession();
+    if (saved) { hideAuthOverlay(); initAppForUser(saved); }
+    else showAuthOverlay();
+    return;
+  }
+
   const saved = loadSession();
-  if (saved) {
-    if (isOnline()) {
-      if (sessionIsFresh()) {
-        // Session was recently verified — skip the API call to save rate limit quota
-        hideAuthOverlay();
-        initAppForUser(saved);
-      } else {
-        // Verify the session is still valid against Appwrite
-        awFetch('GET', '/account', null)
-          .then(account => {
-            saveSession({ ...saved, name: account.name, email: account.email, labels: account.labels || [] });
-            hideAuthOverlay();
-            initAppForUser(AW_SESSION);
-          })
-          .catch(() => {
-            clearSession();
-            showAuthOverlay();
-          });
-      }
-    } else {
-      hideAuthOverlay();
-      initAppForUser(saved);
-    }
+  if (saved && sessionIsFresh()) {
+    // Session verified recently — trust the cache, skip network call
+    AW_SESSION = saved;
+    hideAuthOverlay();
+    initAppForUser(saved);
   } else {
-    showAuthOverlay();
+    // Always try GET /account — works if a cookie session exists
+    awFetch('GET', '/account', null)
+      .then(account => {
+        const merged = { ...(saved || {}), userId: account.$id,
+          name: account.name, email: account.email, labels: account.labels || [] };
+        saveSession(merged);
+        hideAuthOverlay();
+        initAppForUser(AW_SESSION);
+      })
+      .catch(() => {
+        // No valid session — clear stale data and show login
+        clearSession();
+        showAuthOverlay();
+      });
   }
   // Warn if opened via file:// — demo mode will be used automatically
   const warn = getOriginWarning();
