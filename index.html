@@ -1171,8 +1171,18 @@ async function awFetch(method, path, body, sessionToken) {
 let AW_SESSION = null; // { userId, sessionId, sessionSecret, name, email, labels[] }
 
 function saveSession(s) {
-  try { localStorage.setItem('mm_session', JSON.stringify(s)); } catch {}
+  try { localStorage.setItem('mm_session', JSON.stringify({ ...s, _savedAt: Date.now() })); } catch {}
   AW_SESSION = s;
+}
+
+function sessionIsFresh() {
+  // Consider session fresh if verified within the last 10 minutes
+  try {
+    const raw = localStorage.getItem('mm_session');
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    return d._savedAt && (Date.now() - d._savedAt) < 10 * 60 * 1000;
+  } catch { return false; }
 }
 function loadSession() {
   try {
@@ -1220,12 +1230,13 @@ async function doLogin() {
       return;
     }
 
-    const session = await awFetch('POST', '/account/sessions/email', { email, password: pw });
-    // Get full account info to fetch name and labels
+    // One call: create session. Appwrite sets the cookie automatically.
+    await awFetch('POST', '/account/sessions/email', { email, password: pw });
+    // One call: get account info (name, labels for admin check)
     const account = await awFetch('GET', '/account', null);
     saveSession({
       userId:    account.$id,
-      sessionId: session.$id,
+      sessionId: '',
       name:      account.name || email.split('@')[0],
       email:     account.email,
       labels:    account.labels || [],
@@ -1236,7 +1247,7 @@ async function doLogin() {
   } catch (err) {
     if (err.code === 0)        showAuthError(err.message);
     else if (err.code === 401) showAuthError('Incorrect email or password. Please try again.');
-    else if (err.code === 429) showAuthError('Too many attempts. Please wait a moment.');
+    else if (err.code === 429) showAuthError('Rate limit reached — Appwrite blocks repeated login attempts for security. Wait 15–30 minutes then try again. This is an Appwrite limit, not a password issue.');
     else showAuthError((err.message || 'Login failed.') + (err.code ? ' [' + err.code + ']' : ''));
   } finally {
     setAuthLoading(false);
@@ -3073,18 +3084,23 @@ function saveProfile() {
   const saved = loadSession();
   if (saved) {
     if (isOnline()) {
-      // GET /account works if Appwrite session cookie is still valid
-      awFetch('GET', '/account', null)
-        .then(account => {
-          saveSession({ ...saved, name: account.name, email: account.email, labels: account.labels || [] });
-          hideAuthOverlay();
-          initAppForUser(AW_SESSION);
-        })
-        .catch(() => {
-          // Cookie expired — force re-login
-          clearSession();
-          showAuthOverlay();
-        });
+      if (sessionIsFresh()) {
+        // Session was recently verified — skip the API call to save rate limit quota
+        hideAuthOverlay();
+        initAppForUser(saved);
+      } else {
+        // Verify the session is still valid against Appwrite
+        awFetch('GET', '/account', null)
+          .then(account => {
+            saveSession({ ...saved, name: account.name, email: account.email, labels: account.labels || [] });
+            hideAuthOverlay();
+            initAppForUser(AW_SESSION);
+          })
+          .catch(() => {
+            clearSession();
+            showAuthOverlay();
+          });
+      }
     } else {
       hideAuthOverlay();
       initAppForUser(saved);
