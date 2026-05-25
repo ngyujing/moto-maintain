@@ -5,6 +5,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MotoMaintain</title>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2/dist/iife/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -857,17 +858,24 @@ function switchAuthTab(tab) {
 }
 
 // ─── APPWRITE DATA LAYER ──────────────────────────────────────────
-const Q = {
-  // Appwrite Cloud requires values wrapped in array brackets: equal("field",["value"])
-  equal:     (k,v) => `equal("${k}",["${String(v).replace(/"/g,'\\"')}"])`,
-  orderDesc: (k)   => `orderDesc("${k}")`,
-  limit:     (n)   => `limit(${n})`,
-};
-function awQuery(queries) { return queries.map(q=>'queries[]='+encodeURIComponent(q)).join('&'); }
-async function awList(collection,queries=[]) {
-  const qs=awQuery(queries);
-  return awFetch('GET',`/databases/${APPWRITE_DATABASE}/collections/${collection}/documents${qs?'?'+qs:''}`);
+// Use official Appwrite SDK Query builder — correct format guaranteed
+function _sdkClient() {
+  const c = new Appwrite.Client()
+    .setEndpoint(APPWRITE_ENDPOINT)
+    .setProject(APPWRITE_PROJECT_ID);
+  if (AW_SESSION && AW_SESSION.secret && AW_SESSION.secret.length > 0)
+    c.setSession(AW_SESSION.secret);
+  return c;
 }
+async function awList(collection, queries=[]) {
+  const db = new Appwrite.Databases(_sdkClient());
+  return db.listDocuments(APPWRITE_DATABASE, collection, queries);
+}
+const Q = {
+  equal:     (k,v) => Appwrite.Query.equal(k, v),
+  orderDesc: (k)   => Appwrite.Query.orderDesc(k),
+  limit:     (n)   => Appwrite.Query.limit(n),
+};
 async function awCreate(collection,data,docId) {
   return awFetch('POST',`/databases/${APPWRITE_DATABASE}/collections/${collection}/documents`,{documentId:docId||'unique()',data,permissions:[]});
 }
