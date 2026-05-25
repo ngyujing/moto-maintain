@@ -638,12 +638,22 @@ function progress(item, currentKm) {
 
 // ─── APPWRITE RAW API ─────────────────────────────────────────────
 async function awFetch(method, path, body) {
+  // Auto-refresh JWT if it expires within 2 minutes (avoid loop by skipping jwt path)
+  if (!path.includes('/account/jwt') && AW_SESSION && AW_SESSION.jwtExpiry &&
+      Date.now() > AW_SESSION.jwtExpiry - 2 * 60 * 1000) {
+    try {
+      const r = await _jwtFetch();
+      if (r && r.jwt) { AW_SESSION.jwt = r.jwt; AW_SESSION.jwtExpiry = Date.now() + 14*60*1000; }
+    } catch {}
+  }
   const headers = {
     'Content-Type':       'application/json',
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
   if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
     headers['X-Appwrite-Session'] = AW_SESSION.secret;
+  } else if (AW_SESSION && AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now() < AW_SESSION.jwtExpiry) {
+    headers['Authorization'] = 'Bearer ' + AW_SESSION.jwt;
   }
   const opts = { method, headers, credentials:'include' };
   if (body) opts.body = JSON.stringify(body);
@@ -669,11 +679,44 @@ async function awFetch(method, path, body) {
   return json;
 }
 
+// ─── JWT HELPER ──────────────────────────────────────────────────
+// Internal: create a JWT using current session (cookie or X-Appwrite-Session)
+// This is called WITHOUT JWT auth (to avoid circular dependency)
+async function _jwtFetch() {
+  const headers = {
+    'Content-Type':       'application/json',
+    'X-Appwrite-Project': APPWRITE_PROJECT_ID,
+  };
+  if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
+    headers['X-Appwrite-Session'] = AW_SESSION.secret;
+  }
+  const res = await fetch(APPWRITE_ENDPOINT + '/account/jwt', {
+    method:'POST', headers, credentials:'include',
+  });
+  if (!res.ok) throw new Error('JWT failed: ' + res.status);
+  return res.json();
+}
+
+// Call right after session creation to get a JWT token as fallback auth
+async function acquireJwt() {
+  try {
+    const r = await _jwtFetch();
+    if (r && r.jwt) {
+      AW_SESSION.jwt = r.jwt;
+      AW_SESSION.jwtExpiry = Date.now() + 14 * 60 * 1000; // 14 min
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
 // ─── AUTH STATE ───────────────────────────────────────────────────
 let AW_SESSION = null;
 
 function saveSession(s) {
-  try { localStorage.setItem('mm_session', JSON.stringify({...s, _savedAt:Date.now()})); } catch {}
+  const toStore = {...s};
+  if (AW_SESSION && AW_SESSION.jwt) { toStore.jwt = AW_SESSION.jwt; toStore.jwtExpiry = AW_SESSION.jwtExpiry; }
+  try { localStorage.setItem('mm_session', JSON.stringify({...toStore, _savedAt:Date.now()})); } catch {}
   AW_SESSION = s;
 }
 function sessionIsFresh() {
@@ -685,7 +728,20 @@ function sessionIsFresh() {
   } catch { return false; }
 }
 function loadSession() {
-  try { const raw=localStorage.getItem('mm_session'); if(raw){AW_SESSION=JSON.parse(raw);return AW_SESSION;} } catch {}
+  try {
+    const raw=localStorage.getItem('mm_session');
+    if(raw){
+      const d=JSON.parse(raw);
+      AW_SESSION=d;
+      // Only keep JWT if it hasn't expired
+      if (d.jwt && d.jwtExpiry && Date.now() < d.jwtExpiry) {
+        AW_SESSION.jwt = d.jwt; AW_SESSION.jwtExpiry = d.jwtExpiry;
+      } else {
+        delete AW_SESSION.jwt; delete AW_SESSION.jwtExpiry;
+      }
+      return AW_SESSION;
+    }
+  } catch {}
   return null;
 }
 function clearSession() {
@@ -730,8 +786,9 @@ async function doLogin() {
         };
       } else { throw accErr; }
     }
-    saveSession({userId:account.$id,sessionId:session.$id||'',secret,name:account.name||email.split('@')[0],email:account.email||email,labels:account.labels||[]});
     AW_SESSION = {secret, userId:account.$id, name:account.name, email:account.email||email, labels:account.labels||[]};
+    await acquireJwt(); // get JWT while session cookie is freshest
+    saveSession({userId:account.$id,sessionId:session.$id||'',secret,name:account.name||email.split('@')[0],email:account.email||email,labels:account.labels||[]});
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION);
   } catch(err) {
     if (err.code===0) showAuthError(err.message);
@@ -761,6 +818,8 @@ async function doRegister() {
     const userId  = regSession.userId || regSession.$id || '';
     saveSession({userId, sessionId:regSession.$id||'', secret, name, email, labels:[]});
     AW_SESSION = {secret, userId, name, email, labels:[]};
+    await acquireJwt(); // get JWT while session cookie is freshest
+    saveSession({userId, sessionId:regSession.$id||'', secret, name, email, labels:[]});
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION); return;
   } catch(err) {
     if (err.type==='user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
@@ -850,7 +909,30 @@ async function initAppForUser(session) {
       cost:d.cost||0,notes:d.notes||'',completedAt:d.$createdAt,
     }));
     saveState();
-  } catch(err) { console.warn('Appwrite fetch failed, using localStorage:',err.message); loadState(); }
+  } catch(err) {
+    console.warn('Appwrite fetch failed:', err.message, 'code:', err.code);
+    if (err.code === 401 && AW_SESSION) {
+      // Auth failed — try to refresh JWT then retry once
+      const refreshed = await acquireJwt();
+      if (refreshed) {
+        try {
+          const [b2,i2,h2] = await Promise.all([
+            awList('motorcycles',      [Q.equal('userId',session.userId),Q.limit(100)]),
+            awList('maintenance_items',[Q.equal('userId',session.userId),Q.limit(500)]),
+            awList('service_records',  [Q.equal('userId',session.userId),Q.orderDesc('serviceDate'),Q.limit(500)]),
+          ]);
+          APP.bikes   = (b2.documents||[]).map(d=>({id:d.$id,make:d.make,model:d.model,year:d.year,km:d.currentKm,nickname:d.nickname||'',color:d.color||'',vin:d.vin||'',bikeType:d.bikeType||'naked',addedAt:d.$createdAt}));
+          APP.items   = (i2.documents||[]).map(d=>({id:d.$id,bikeId:d.motorcycleId,partType:d.partType,partLabel:d.partLabel,intervalKm:d.intervalKm,intervalDays:d.intervalDays,lastKm:d.lastServiceKm,lastDate:d.lastServiceDate,nextKm:d.nextDueKm,nextDate:d.nextDueDate,status:d.serviceStatus||'never_serviced',note:'',isCustom:d.isCustomInterval||false}));
+          APP.history = (h2.documents||[]).map(d=>({id:d.$id,bikeId:d.motorcycleId,itemId:d.maintenanceItemId,partLabel:d.partLabel,partType:d.partType,km:d.mileageAtService,date:d.serviceDate,cost:d.cost||0,notes:d.notes||'',completedAt:d.$createdAt}));
+          saveState();
+          console.log('[MotoMaintain] Retry after JWT refresh succeeded');
+          return; // skip loadState fallback — we have real data
+        } catch(retryErr) { console.warn('Retry also failed:', retryErr.message); }
+      }
+      showToast('⚠️ Could not load your cloud data. Sign out and sign in again to resync.');
+    }
+    loadState();
+  }
 
   renderAll(); renderTemplates('naked'); renderTypeSwitcher();
 }
