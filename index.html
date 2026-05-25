@@ -642,7 +642,7 @@ async function awFetch(method, path, body) {
     'Content-Type':       'application/json',
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
-  if (AW_SESSION && AW_SESSION.secret) {
+  if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
     headers['X-Appwrite-Session'] = AW_SESSION.secret;
   }
   const opts = { method, headers, credentials:'include' };
@@ -712,12 +712,30 @@ async function doLogin() {
     if (!isOnline()) { clearAuthError(); hideAuthOverlay(); initAppForUser({name:email.split('@')[0],email,labels:[],userId:btoa(email).replace(/=/g,'')}); return; }
     try { await awFetch('DELETE','/account/sessions/current',null); } catch {}
     const session = await awFetch('POST','/account/sessions/email',{email,password:pw});
-    AW_SESSION = {secret:session.secret||''};
-    const account = await awFetch('GET','/account',null);
-    saveSession({userId:account.$id,sessionId:session.$id||'',secret:session.secret||'',name:account.name||email.split('@')[0],email:account.email,labels:account.labels||[]});
+    // 401 past this point = cookie blocked on mobile, NOT wrong password
+    const secret = (session.secret && session.secret.length > 0) ? session.secret : '';
+    AW_SESSION = {secret, userId: session.userId || ''};
+    let account;
+    try {
+      account = await awFetch('GET','/account',null);
+    } catch(accErr) {
+      if (accErr.code === 401) {
+        // Mobile browser blocked cross-origin cookie — use cached data + form email
+        const cached = loadSession();
+        account = {
+          $id:    session.userId || (cached && cached.userId) || '',
+          name:   (cached && cached.email === email ? cached.name : null) || email.split('@')[0],
+          email,
+          labels: (cached && cached.email === email ? cached.labels : null) || [],
+        };
+      } else { throw accErr; }
+    }
+    saveSession({userId:account.$id,sessionId:session.$id||'',secret,name:account.name||email.split('@')[0],email:account.email||email,labels:account.labels||[]});
+    AW_SESSION = {secret, userId:account.$id, name:account.name, email:account.email||email, labels:account.labels||[]};
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION);
   } catch(err) {
     if (err.code===0) showAuthError(err.message);
+    // 401 here = session creation failed = wrong password (GET /account 401 is handled above)
     else if (err.code===401) { try{await awFetch('DELETE','/account/sessions/current',null);}catch{} clearSession(); showAuthError('Incorrect email or password. Please try again.'); }
     else if (err.code===429) showAuthError('Too many attempts. Please wait and try again.');
     else showAuthError((err.message||'Login failed.')+(err.code?' ['+err.code+']':''));
@@ -737,9 +755,12 @@ async function doRegister() {
     await awFetch('POST','/account',{userId:'unique()',name,email,password:pw});
     try{await awFetch('DELETE','/account/sessions/current',null);}catch{}
     const regSession = await awFetch('POST','/account/sessions/email',{email,password:pw});
-    AW_SESSION = {secret:regSession.secret||''};
-    const acct = await awFetch('GET','/account',null);
-    saveSession({userId:acct.$id,sessionId:regSession.$id||'',secret:regSession.secret||'',name:acct.name||name,email:acct.email,labels:acct.labels||[]});
+    // Don't call GET /account — we already have name/email from the form.
+    // Calling GET /account requires cookie auth which mobile browsers often block cross-origin.
+    const secret  = (regSession.secret && regSession.secret.length > 0) ? regSession.secret : '';
+    const userId  = regSession.userId || regSession.$id || '';
+    saveSession({userId, sessionId:regSession.$id||'', secret, name, email, labels:[]});
+    AW_SESSION = {secret, userId, name, email, labels:[]};
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION); return;
   } catch(err) {
     if (err.type==='user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
@@ -1735,21 +1756,6 @@ function renderSettings() {
   );
   ['dark','mid','light'].forEach(t=>
     document.getElementById('theme-'+t)?.classList.toggle('selected', t === currentTheme)
-  );
-}
-
-function renderSettings() {
-  const name  = (AW_SESSION && AW_SESSION.name)  || APP.profile.name  || '';
-  const email = (AW_SESSION && AW_SESSION.email) || APP.profile.email || '';
-  const pn = document.getElementById('profile-name');
-  const pe = document.getElementById('profile-email');
-  if (pn && pn.value !== name)  pn.value = name;
-  if (pe && pe.value !== email) pe.value = email;
-  document.querySelectorAll('.currency-btn').forEach(b =>
-    b.classList.toggle('selected', b.dataset.code === currentCurrency)
-  );
-  ['dark','mid','light'].forEach(t =>
-    document.getElementById('theme-' + t)?.classList.toggle('selected', t === currentTheme)
   );
 }
 
