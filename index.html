@@ -311,7 +311,10 @@ select.form-input option{background:var(--s3)}
 <div id="page-dashboard" class="page active">
   <div class="page-header">
     <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div></div>
-    <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
+    <div style="display:flex;gap:8px">
+      <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
+      <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
+    </div>
   </div>
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg)">🔴</div><div class="stat-label">Overdue</div><div class="stat-val" id="dash-overdue" style="color:var(--red)">0</div><div class="stat-sub">Needs immediate attention</div></div>
@@ -875,6 +878,66 @@ async function awDelete(collection,docId) {
 }
 
 // ─── USER DATA BOOTSTRAP ──────────────────────────────────────────
+// ── Core data fetch from Appwrite — used by initAppForUser and syncFromCloud ──
+async function _fetchCloudData(userId) {
+  const [bikesRes, itemsRes, histRes] = await Promise.all([
+    awList('motorcycles',      [Q.equal('userId',userId), Q.limit(100)]),
+    awList('maintenance_items',[Q.equal('userId',userId), Q.limit(500)]),
+    awList('service_records',  [Q.equal('userId',userId), Q.orderDesc('serviceDate'), Q.limit(500)]),
+  ]);
+  APP.bikes = (bikesRes.documents||[]).map(d=>({
+    id:d.$id, make:d.make, model:d.model, year:d.year, km:d.currentKm,
+    nickname:d.nickname||'', color:d.color||'', vin:d.vin||'',
+    bikeType:d.bikeType||'naked', addedAt:d.$createdAt,
+  }));
+  APP.items = (itemsRes.documents||[]).map(d=>({
+    id:d.$id, bikeId:d.motorcycleId, partType:d.partType, partLabel:d.partLabel,
+    intervalKm:d.intervalKm, intervalDays:d.intervalDays,
+    lastKm:d.lastServiceKm, lastDate:d.lastServiceDate,
+    nextKm:d.nextDueKm, nextDate:d.nextDueDate,
+    status:d.serviceStatus||'never_serviced', note:'', isCustom:d.isCustomInterval||false,
+  }));
+  APP.history = (histRes.documents||[]).map(d=>({
+    id:d.$id, bikeId:d.motorcycleId, itemId:d.maintenanceItemId,
+    partLabel:d.partLabel, partType:d.partType, km:d.mileageAtService,
+    date:d.serviceDate, cost:d.cost||0, notes:d.notes||'', completedAt:d.$createdAt,
+  }));
+}
+
+// Manual cloud sync — callable from a button or anywhere in the app
+async function syncFromCloud() {
+  const userId = AW_SESSION && AW_SESSION.userId;
+  if (!isOnline() || !userId) { showToast('⚠️ Not signed in to cloud'); return; }
+  const syncBtn = document.getElementById('sync-btn');
+  if (syncBtn) { syncBtn.textContent = '🔄 Syncing…'; syncBtn.disabled = true; }
+  try {
+    await _fetchCloudData(userId);
+    saveState();
+    renderAll();
+    showToast('✅ Synced! ' + APP.bikes.length + ' bike(s) loaded from cloud.');
+  } catch(err) {
+    let msg = err.message || 'unknown error';
+    if (err.code === 401) {
+      // Try JWT refresh once then retry
+      const got = await acquireJwt();
+      if (got) {
+        try {
+          await _fetchCloudData(userId);
+          saveState(); renderAll();
+          showToast('✅ Synced after re-auth! ' + APP.bikes.length + ' bike(s) loaded.');
+          if (syncBtn) { syncBtn.textContent = '☁️ Sync'; syncBtn.disabled = false; }
+          return;
+        } catch(e2) { msg = e2.message || msg; }
+      }
+      msg = 'Auth error — try signing out and back in. [' + err.code + ']';
+    }
+    showToast('❌ Sync failed: ' + msg);
+    console.error('syncFromCloud error:', err);
+  } finally {
+    if (syncBtn) { syncBtn.textContent = '☁️ Sync'; syncBtn.disabled = false; }
+  }
+}
+
 async function initAppForUser(session) {
   APP.profile = { name:session.name||(session.email?session.email.split('@')[0]:'Rider'), email:session.email||'' };
   const tplTab = document.getElementById('tab-templates');
@@ -883,57 +946,39 @@ async function initAppForUser(session) {
   const pn=document.getElementById('profile-name'); const pe=document.getElementById('profile-email');
   if (pn) pn.value=session.name||''; if (pe) pe.value=session.email||'';
 
-  if (!isOnline()||!session.userId||session.userId==='demo') { loadState(); renderAll(); renderTemplates('naked'); renderTypeSwitcher(); return; }
-
-  try {
-    const [bikesRes,itemsRes,histRes] = await Promise.all([
-      awList('motorcycles',      [Q.equal('userId',session.userId),Q.limit(100)]),
-      awList('maintenance_items',[Q.equal('userId',session.userId),Q.limit(500)]),
-      awList('service_records',  [Q.equal('userId',session.userId),Q.orderDesc('serviceDate'),Q.limit(500)]),
-    ]);
-    APP.bikes = (bikesRes.documents||[]).map(d=>({
-      id:d.$id,make:d.make,model:d.model,year:d.year,km:d.currentKm,
-      nickname:d.nickname||'',color:d.color||'',vin:d.vin||'',bikeType:d.bikeType||'naked',addedAt:d.$createdAt,
-    }));
-    APP.items = (itemsRes.documents||[]).map(d=>({
-      id:d.$id,bikeId:d.motorcycleId,partType:d.partType,partLabel:d.partLabel,
-      intervalKm:d.intervalKm,intervalDays:d.intervalDays,
-      lastKm:d.lastServiceKm,lastDate:d.lastServiceDate,
-      // ▼ PATCH 3: read serviceStatus (not status)
-      nextKm:d.nextDueKm,nextDate:d.nextDueDate,status:d.serviceStatus||'never_serviced',
-      note:'',isCustom:d.isCustomInterval||false,
-    }));
-    APP.history = (histRes.documents||[]).map(d=>({
-      id:d.$id,bikeId:d.motorcycleId,itemId:d.maintenanceItemId,
-      partLabel:d.partLabel,partType:d.partType,km:d.mileageAtService,date:d.serviceDate,
-      cost:d.cost||0,notes:d.notes||'',completedAt:d.$createdAt,
-    }));
-    saveState();
-  } catch(err) {
-    console.warn('Appwrite fetch failed:', err.message, 'code:', err.code);
-    if (err.code === 401 && AW_SESSION) {
-      // Auth failed — try to refresh JWT then retry once
-      const refreshed = await acquireJwt();
-      if (refreshed) {
-        try {
-          const [b2,i2,h2] = await Promise.all([
-            awList('motorcycles',      [Q.equal('userId',session.userId),Q.limit(100)]),
-            awList('maintenance_items',[Q.equal('userId',session.userId),Q.limit(500)]),
-            awList('service_records',  [Q.equal('userId',session.userId),Q.orderDesc('serviceDate'),Q.limit(500)]),
-          ]);
-          APP.bikes   = (b2.documents||[]).map(d=>({id:d.$id,make:d.make,model:d.model,year:d.year,km:d.currentKm,nickname:d.nickname||'',color:d.color||'',vin:d.vin||'',bikeType:d.bikeType||'naked',addedAt:d.$createdAt}));
-          APP.items   = (i2.documents||[]).map(d=>({id:d.$id,bikeId:d.motorcycleId,partType:d.partType,partLabel:d.partLabel,intervalKm:d.intervalKm,intervalDays:d.intervalDays,lastKm:d.lastServiceKm,lastDate:d.lastServiceDate,nextKm:d.nextDueKm,nextDate:d.nextDueDate,status:d.serviceStatus||'never_serviced',note:'',isCustom:d.isCustomInterval||false}));
-          APP.history = (h2.documents||[]).map(d=>({id:d.$id,bikeId:d.motorcycleId,itemId:d.maintenanceItemId,partLabel:d.partLabel,partType:d.partType,km:d.mileageAtService,date:d.serviceDate,cost:d.cost||0,notes:d.notes||'',completedAt:d.$createdAt}));
-          saveState();
-          console.log('[MotoMaintain] Retry after JWT refresh succeeded');
-          return; // skip loadState fallback — we have real data
-        } catch(retryErr) { console.warn('Retry also failed:', retryErr.message); }
-      }
-      showToast('⚠️ Could not load your cloud data. Sign out and sign in again to resync.');
-    }
-    loadState();
+  if (!isOnline()||!session.userId||session.userId==='demo') {
+    loadState(); renderAll(); renderTemplates('naked'); renderTypeSwitcher(); return;
   }
 
+  // Try to load from cloud; always call renderAll() whether it succeeds or not
+  let cloudLoaded = false;
+  try {
+    await _fetchCloudData(session.userId);
+    saveState();
+    cloudLoaded = true;
+  } catch(firstErr) {
+    console.warn('initAppForUser first attempt failed:', firstErr.message, 'code:', firstErr.code);
+    // On auth failure: refresh JWT and retry once
+    if (firstErr.code === 401) {
+      try {
+        await acquireJwt();
+        await _fetchCloudData(session.userId);
+        saveState();
+        cloudLoaded = true;
+      } catch(retryErr) {
+        console.warn('initAppForUser retry failed:', retryErr.message);
+      }
+    }
+    if (!cloudLoaded) {
+      loadState(); // fall back to any cached local data
+      // Show sync button prominently so user can retry
+      setTimeout(() => {
+        showToast('📵 Using cached data — tap ☁️ Sync to reload from cloud.');
+      }, 800);
+    }
+  }
+
+  // ALWAYS render — whether data came from cloud or localStorage
   renderAll(); renderTemplates('naked'); renderTypeSwitcher();
 }
 
