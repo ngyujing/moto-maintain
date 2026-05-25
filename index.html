@@ -858,7 +858,8 @@ function switchAuthTab(tab) {
 
 // ─── APPWRITE DATA LAYER ──────────────────────────────────────────
 const Q = {
-  equal:     (k,v) => `equal("${k}","${v}")`,
+  // Appwrite Cloud requires values wrapped in array brackets: equal("field",["value"])
+  equal:     (k,v) => `equal("${k}",["${String(v).replace(/"/g,'\\"')}"])`,
   orderDesc: (k)   => `orderDesc("${k}")`,
   limit:     (n)   => `limit(${n})`,
 };
