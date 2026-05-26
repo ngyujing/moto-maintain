@@ -756,6 +756,31 @@ function loadSession() {
 }
 
 // ─── AUTH FUNCTIONS ───────────────────────────────────────────────
+
+// Create a session and force Appwrite to include the secret in the response.
+// The 1.4.0 response format includes session.secret; newer formats strip it.
+// Having the secret enables header-based auth that works on mobile Safari (no cookies).
+async function _createSessionWithSecret(email, password) {
+  const res = await fetch(APPWRITE_ENDPOINT + '/account/sessions/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type':       'application/json',
+      'X-Appwrite-Project': APPWRITE_PROJECT_ID,
+      'X-Appwrite-Response-Format': '1.4.0',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) {
+    const err = new Error(data.message || 'Login failed');
+    err.code = res.status; err.type = data.type || '';
+    throw err;
+  }
+  return data;
+}
+
+
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw    = document.getElementById('login-pw').value;
@@ -776,7 +801,9 @@ async function doLogin() {
       });
     } catch {}
 
-    const session = await awFetch('POST','/account/sessions/email',{email,password:pw});
+    // Use 1.4.0 response format so Appwrite includes session.secret in body.
+    // This is the ONLY way to get header-based auth working on mobile Safari (no cookie needed).
+    const session = await _createSessionWithSecret(email, pw);
     if (!session || !session.userId) throw new Error('Login response missing userId');
 
     AW_SESSION = {
@@ -787,8 +814,9 @@ async function doLogin() {
     };
     console.log('[Auth] login: secret length =', AW_SESSION.secret.length);
 
-    // Try to acquire JWT (best auth for mobile). May fail silently if cookie blocked.
-    await acquireJwt();
+    // If we have a secret, that's enough — no JWT needed (and avoids JWT+secret conflicts)
+    // If we don't have a secret (very old or very new Appwrite), try JWT via cookie
+    if (!AW_SESSION.secret) await acquireJwt();
 
     // Get account profile (will work now that we have auth)
     try {
@@ -835,7 +863,7 @@ async function doRegister() {
         credentials:'include',
       });
     } catch {}
-    const session = await awFetch('POST','/account/sessions/email',{email,password:pw});
+    const session = await _createSessionWithSecret(email, pw);
 
     AW_SESSION = {
       userId:    session.userId || '',
@@ -844,7 +872,7 @@ async function doRegister() {
       name, email, labels: [],
     };
     console.log('[Auth] register: secret length =', AW_SESSION.secret.length);
-    await acquireJwt();
+    if (!AW_SESSION.secret) await acquireJwt();
     persistSession();
     clearAuthError(); hideAuthOverlay();
     await initAppForUser(AW_SESSION);
