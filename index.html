@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MotoMaintain v20260526-093109</title>
+<title>MotoMaintain v20260526-144027</title>
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2/dist/iife/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -314,7 +314,7 @@ select.form-input option{background:var(--s3)}
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-093109</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-144027</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
       <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
@@ -451,9 +451,9 @@ select.form-input option{background:var(--s3)}
     <div class="settings-title">Notifications</div>
     <div class="settings-desc">Control what alerts appear on your dashboard.</div>
     <div>
-      <div class="settings-row card" style="margin-bottom:8px"><div><div class="settings-row-label">Overdue alerts</div><div class="settings-row-sub">Show a pulsing warning for overdue items</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="settings-row card" style="margin-bottom:8px"><div><div class="settings-row-label">Due Soon badge</div><div class="settings-row-sub">Show count badge on sidebar navigation</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="settings-row card"><div><div class="settings-row-label">Due-soon threshold</div><div class="settings-row-sub">Warn me when within this many km of a service</div></div><select class="form-input" style="width:120px;padding:6px 10px;font-size:12px"><option>300 km</option><option selected>500 km</option><option>750 km</option><option>1,000 km</option></select></div>
+      <div class="settings-row card" style="margin-bottom:8px"><div><div class="settings-row-label">Overdue alerts</div><div class="settings-row-sub">Show a pulsing warning for overdue items</div></div><button id="toggle-overdue" class="toggle on" onclick="toggleSetting('overdueAlerts',this)"></button></div>
+      <div class="settings-row card" style="margin-bottom:8px"><div><div class="settings-row-label">Due Soon badge</div><div class="settings-row-sub">Show count badge on sidebar navigation</div></div><button id="toggle-duebadge" class="toggle on" onclick="toggleSetting('dueSoonBadge',this)"></button></div>
+      <div class="settings-row card"><div><div class="settings-row-label">Due-soon threshold</div><div class="settings-row-sub">Warn me when within this many km of a service</div></div><select id="threshold-select" class="form-input" style="width:120px;padding:6px 10px;font-size:12px" onchange="saveSetting('dueSoonThreshold',parseInt(this.value))"><option value="300">300 km</option><option value="500" selected>500 km</option><option value="750">750 km</option><option value="1000">1,000 km</option></select></div>
     </div>
   </div>
   <div class="settings-section">
@@ -1328,6 +1328,45 @@ const BIKE_TYPES = {
 
 
 // ─── STATE PERSISTENCE ────────────────────────────────────────────
+// ── App settings (persisted in localStorage alongside theme/currency) ──────────
+const APP_SETTINGS = {
+  overdueAlerts:   true,
+  dueSoonBadge:    true,
+  dueSoonThreshold: 500,
+};
+
+function toggleSetting(key, btn) {
+  APP_SETTINGS[key] = !APP_SETTINGS[key];
+  btn.classList.toggle('on', APP_SETTINGS[key]);
+  saveState();
+  showToast('✓ Setting saved');
+}
+
+function saveSetting(key, value) {
+  APP_SETTINGS[key] = value;
+  saveState();
+  showToast('✓ Setting saved');
+}
+
+function applySettings() {
+  // Overdue alerts toggle
+  const ot = document.getElementById('toggle-overdue');
+  if (ot) ot.classList.toggle('on', APP_SETTINGS.overdueAlerts);
+  // Due soon badge toggle
+  const dt = document.getElementById('toggle-duebadge');
+  if (dt) dt.classList.toggle('on', APP_SETTINGS.dueSoonBadge);
+  // Threshold select
+  const ts = document.getElementById('threshold-select');
+  if (ts) ts.value = String(APP_SETTINGS.dueSoonThreshold || 500);
+  // Apply badge visibility
+  const sb = document.getElementById('sidebar-badge');
+  const bb = document.getElementById('bnav-badge');
+  if (!APP_SETTINGS.dueSoonBadge) {
+    if (sb) sb.style.display = 'none';
+    if (bb) bb.style.display = 'none';
+  }
+}
+
 let activeTemplateType = 'naked';
 let currentTheme       = 'dark';
 let currentCurrency    = 'SGD';
@@ -1341,7 +1380,7 @@ function uid() {
 function saveState() {
   try {
     const _uid=AW_SESSION?AW_SESSION.userId:'local';
-    localStorage.setItem(STORAGE_KEY+'_'+_uid,JSON.stringify({bikes:APP.bikes,items:APP.items,history:APP.history,nextId:APP.nextId,profile:APP.profile,theme:currentTheme,currency:currentCurrency}));
+    localStorage.setItem(STORAGE_KEY+'_'+_uid,JSON.stringify({bikes:APP.bikes,items:APP.items,history:APP.history,nextId:APP.nextId,profile:APP.profile,theme:currentTheme,currency:currentCurrency,settings:APP_SETTINGS}));
   } catch(e){console.warn('MotoMaintain: save failed',e);}
 }
 function loadState() {
@@ -1357,6 +1396,7 @@ function loadState() {
     if (d.profile)                APP.profile=d.profile;
     if (d.theme)    {currentTheme   =d.theme;   document.body.setAttribute('data-theme',d.theme);}
     if (d.currency) {currentCurrency=d.currency;}
+    if (d.settings) {Object.assign(APP_SETTINGS, d.settings);}
     return true;
   } catch(e){console.warn('MotoMaintain: load failed',e);return false;}
 }
@@ -1377,7 +1417,7 @@ function calcStatus(item,currentKm) {
   const kmOver  =item.nextKm  &&currentKm>=item.nextKm;
   const dateOver=item.nextDate&&now>=new Date(item.nextDate).getTime();
   if (kmOver||dateOver) return 'overdue';
-  const kmSoon  =item.nextKm  &&(item.nextKm-currentKm)<=500;
+  const kmSoon  =item.nextKm  &&(item.nextKm-currentKm)<=(APP_SETTINGS.dueSoonThreshold||500);
   const dateSoon=item.nextDate&&(new Date(item.nextDate).getTime()-now)<=30*86400000;
   if (kmSoon||dateSoon) return 'due_soon';
   return 'up_to_date';
@@ -1958,7 +1998,7 @@ async function saveEditIntervals() {
       else if(kmInt>0&&bike.km>0){existing.lastKm=Math.floor(bike.km/kmInt)*kmInt;nextKm=existing.lastKm+kmInt;}
       if(existing.lastDate){const nd=new Date(existing.lastDate);nd.setDate(nd.getDate()+dayInt);nextDate=nd.toISOString().split('T')[0];}
       else{const nd=new Date();nd.setDate(nd.getDate()+dayInt);nextDate=nd.toISOString().split('T')[0];}
-      const upd={...existing,partLabel:edited.partLabel.trim(),intervalKm:kmInt,intervalDays:dayInt,nextKm,nextDate,isCustom:edited.isCustom};
+      const upd={...existing,partLabel:edited.partLabel.trim(),intervalKm:kmInt,intervalDays:dayInt,nextKm,nextDate,isCustom:edited.isCustom,serviceType:edited.serviceType||existing.serviceType||'I',remarks:edited.remarks??existing.remarks??''};
       upd.status=calcStatus(upd,bike.km); updatedItems.push(upd);
     } else {
       let lastKm=null,nextKm=null;
@@ -2167,6 +2207,8 @@ function renderSettings() {
   // Show Debug section only for admins
   const dbg = document.getElementById('admin-debug-section');
   if (dbg) dbg.style.display = isAdmin() ? '' : 'none';
+  // Restore saved notification settings into UI
+  applySettings();
 }
 
 function saveProfile() {
