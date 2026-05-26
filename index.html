@@ -864,11 +864,12 @@ function _sdkClient() {
   return c;
 }
 async function awList(collection, queries=[]) {
-  const db = new Appwrite.Databases(_sdkClient());
-  return db.listDocuments(APPWRITE_DATABASE, collection, queries);
+  // Use awFetch (header-based auth, works on mobile) with Query-generated strings
+  const qs = queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&');
+  return awFetch('GET', `/databases/${APPWRITE_DATABASE}/collections/${collection}/documents${qs?'?'+qs:''}`);
 }
 const Q = {
-  equal:     (k,v) => Appwrite.Query.equal(k, v),
+  equal:     (k,v) => Appwrite.Query.equal(k,v),
   orderDesc: (k)   => Appwrite.Query.orderDesc(k),
   limit:     (n)   => Appwrite.Query.limit(n),
 };
