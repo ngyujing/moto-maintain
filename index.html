@@ -641,10 +641,11 @@ function progress(item, currentKm) {
 }
 
 // ─── APPWRITE RAW API ─────────────────────────────────────────────
-// One function for ALL Appwrite API calls. Sends every form of auth we have.
+// One function for ALL Appwrite API calls. Sends exactly ONE auth method.
+// Appwrite v1.6+ rejects requests with both JWT+cookie or session+cookie.
 async function awFetch(method, path, body) {
   // Auto-refresh JWT if expiring within 2 min (skip on auth-creating paths)
-  const isAuthPath = path.includes('/account/jwt') || path.includes('/account/sessions');
+  const isAuthPath = path.includes('/account/jwt') || path.includes('/account/sessions') || path === '/account';
   if (!isAuthPath && AW_SESSION && AW_SESSION.jwtExpiry &&
       Date.now() > AW_SESSION.jwtExpiry - 2 * 60 * 1000) {
     try { await acquireJwt(); } catch {}
@@ -655,14 +656,13 @@ async function awFetch(method, path, body) {
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
 
-  // Pick EXACTLY ONE auth method — Appwrite v1.6+ rejects mixed auth (JWT + cookie).
-  // Priority: JWT > session secret > cookie. Use credentials:omit when we have a header.
+  // EXACTLY ONE auth method. Order: session secret (most reliable) > JWT > cookie.
   let useCookies = true;
-  if (AW_SESSION && AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now() < AW_SESSION.jwtExpiry) {
-    headers['X-Appwrite-JWT'] = AW_SESSION.jwt;
-    useCookies = false;
-  } else if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
+  if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
     headers['X-Appwrite-Session'] = AW_SESSION.secret;
+    useCookies = false;
+  } else if (AW_SESSION && AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now() < AW_SESSION.jwtExpiry) {
+    headers['X-Appwrite-JWT'] = AW_SESSION.jwt;
     useCookies = false;
   }
 
@@ -675,7 +675,7 @@ async function awFetch(method, path, body) {
   } catch (netErr) {
     const friendly = new Error(
       window.location.protocol === 'file:'
-        ? 'Cannot connect: open this file via a web server, not file://.'
+        ? 'Open via a web server, not file://'
         : 'Network error — check internet and Appwrite endpoint.'
     );
     friendly.code = 0;
@@ -691,19 +691,22 @@ async function awFetch(method, path, body) {
   return json;
 }
 
-// ─── JWT (the auth method that actually works on iPhone Safari) ──
+// JWT acquisition (fallback only if session secret unavailable)
 async function acquireJwt() {
   if (!isOnline() || !AW_SESSION) return false;
   try {
     const headers = {
       'Content-Type':       'application/json',
       'X-Appwrite-Project': APPWRITE_PROJECT_ID,
-      };
+    };
+    // If we have secret, prefer it; otherwise rely on cookie
+    let useCookies = true;
     if (AW_SESSION.secret && AW_SESSION.secret.length > 0) {
       headers['X-Appwrite-Session'] = AW_SESSION.secret;
+      useCookies = false;
     }
     const res = await fetch(APPWRITE_ENDPOINT + '/account/jwt', {
-      method:'POST', headers, credentials:'include',
+      method:'POST', headers, credentials: useCookies ? 'include' : 'omit',
     });
     if (!res.ok) { console.warn('[Auth] JWT acquire failed:', res.status); return false; }
     const r = await res.json();
@@ -755,11 +758,28 @@ function loadSession() {
   } catch { return null; }
 }
 
+// Verify session is still valid with server. Returns true if it is.
+async function verifySession() {
+  if (!AW_SESSION) return false;
+  try {
+    const acct = await awFetch('GET','/account',null);
+    AW_SESSION.userId = acct.$id;
+    AW_SESSION.name   = acct.name || AW_SESSION.name;
+    AW_SESSION.email  = acct.email || AW_SESSION.email;
+    AW_SESSION.labels = acct.labels || [];
+    persistSession();
+    console.log('[Auth] verifySession OK: userId =', AW_SESSION.userId);
+    return true;
+  } catch(e) {
+    console.warn('[Auth] verifySession failed:', e.code, e.message);
+    return false;
+  }
+}
+
 // ─── AUTH FUNCTIONS ───────────────────────────────────────────────
 
 // Create a session and force Appwrite to include the secret in the response.
 // The 1.4.0 response format includes session.secret; newer formats strip it.
-// Having the secret enables header-based auth that works on mobile Safari (no cookies).
 async function _createSessionWithSecret(email, password) {
   const res = await fetch(APPWRITE_ENDPOINT + '/account/sessions/email', {
     method: 'POST',
@@ -779,7 +799,6 @@ async function _createSessionWithSecret(email, password) {
   }
   return data;
 }
-
 
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
@@ -801,8 +820,6 @@ async function doLogin() {
       });
     } catch {}
 
-    // Use 1.4.0 response format so Appwrite includes session.secret in body.
-    // This is the ONLY way to get header-based auth working on mobile Safari (no cookie needed).
     const session = await _createSessionWithSecret(email, pw);
     if (!session || !session.userId) throw new Error('Login response missing userId');
 
@@ -812,20 +829,23 @@ async function doLogin() {
       sessionId: session.$id || '',
       name: email.split('@')[0], email, labels: [],
     };
-    console.log('[Auth] login: secret length =', AW_SESSION.secret.length);
+    console.log('[Auth] login: userId =', AW_SESSION.userId, '| secret len =', AW_SESSION.secret.length);
 
-    // If we have a secret, that's enough — no JWT needed (and avoids JWT+secret conflicts)
-    // If we don't have a secret (very old or very new Appwrite), try JWT via cookie
-    if (!AW_SESSION.secret) await acquireJwt();
+    // If no secret was returned, fall back to JWT (cookie must work for this)
+    if (!AW_SESSION.secret) {
+      const ok = await acquireJwt();
+      if (!ok) {
+        showAuthError('Login succeeded but auth headers unavailable. This browser may be blocking required features.');
+        clearSession(); return;
+      }
+    }
 
-    // Get account profile (will work now that we have auth)
-    try {
-      const account = await awFetch('GET','/account',null);
-      AW_SESSION.userId = account.$id;
-      AW_SESSION.name   = account.name || AW_SESSION.name;
-      AW_SESSION.email  = account.email || AW_SESSION.email;
-      AW_SESSION.labels = account.labels || [];
-    } catch(e) { console.warn('[Auth] /account fetch failed:', e.code, e.message); }
+    // Verify session works end-to-end before declaring victory
+    const verified = await verifySession();
+    if (!verified) {
+      showAuthError('Login succeeded but session verification failed. Please try again.');
+      clearSession(); return;
+    }
 
     persistSession();
     clearAuthError(); hideAuthOverlay();
@@ -854,7 +874,12 @@ async function doRegister() {
       return;
     }
     AW_SESSION = null;
-    await awFetch('POST','/account',{userId:'unique()',name,email,password:pw});
+    await fetch(APPWRITE_ENDPOINT + '/account', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Appwrite-Project':APPWRITE_PROJECT_ID},
+      credentials:'include',
+      body:JSON.stringify({userId:'unique()',name,email,password:pw}),
+    }).then(async r => { if (!r.ok) { const d=await r.json().catch(()=>({})); const e=new Error(d.message||'Registration failed'); e.code=r.status; e.type=d.type||''; throw e; }});
 
     try {
       await fetch(APPWRITE_ENDPOINT + '/account/sessions/current', {
@@ -871,7 +896,7 @@ async function doRegister() {
       sessionId: session.$id || '',
       name, email, labels: [],
     };
-    console.log('[Auth] register: secret length =', AW_SESSION.secret.length);
+    console.log('[Auth] register: userId =', AW_SESSION.userId, '| secret len =', AW_SESSION.secret.length);
     if (!AW_SESSION.secret) await acquireJwt();
     persistSession();
     clearAuthError(); hideAuthOverlay();
@@ -963,39 +988,57 @@ async function _fetchCloudData(userId) {
 
 // Manual cloud sync — callable from a button or anywhere in the app
 async function syncFromCloud() {
+  console.log('[Sync] syncFromCloud triggered');
+  console.log('[Sync] AW_SESSION:', AW_SESSION ? {
+    userId: AW_SESSION.userId,
+    hasSecret: !!(AW_SESSION.secret && AW_SESSION.secret.length>0),
+    hasJwt: !!(AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now()<AW_SESSION.jwtExpiry),
+  } : 'none');
+
   const userId = AW_SESSION && AW_SESSION.userId;
   if (!isOnline() || !userId) { showToast('⚠️ Not signed in to cloud'); return; }
   const syncBtn = document.getElementById('sync-btn');
   if (syncBtn) { syncBtn.textContent = '🔄 Syncing…'; syncBtn.disabled = true; }
   try {
+    // Verify session is alive first — gives a clear error if it's expired
+    const ok = await verifySession();
+    if (!ok) {
+      showToast('❌ Session expired. Please sign out and sign in again.');
+      return;
+    }
+
+    // ALWAYS clear before re-fetching to prevent stale data
+    APP.bikes = []; APP.items = []; APP.history = [];
     await _fetchCloudData(userId);
     saveState();
     renderAll();
+    console.log('[Sync] ✅ Loaded:', APP.bikes.length, 'bikes,', APP.items.length, 'items,', APP.history.length, 'records');
     showToast('✅ Synced! ' + APP.bikes.length + ' bike(s) loaded from cloud.');
   } catch(err) {
     let msg = err.message || 'unknown error';
-    if (err.code === 401) {
-      // Try JWT refresh once then retry
+    if (err.code === 401 || err.code === 403) {
       const got = await acquireJwt();
       if (got) {
         try {
+          APP.bikes = []; APP.items = []; APP.history = [];
           await _fetchCloudData(userId);
           saveState(); renderAll();
           showToast('✅ Synced after re-auth! ' + APP.bikes.length + ' bike(s) loaded.');
-          if (syncBtn) { syncBtn.textContent = '☁️ Sync'; syncBtn.disabled = false; }
           return;
         } catch(e2) { msg = e2.message || msg; }
       }
       msg = 'Auth error [' + err.code + '] — sign out and back in.';
     }
+    console.error('[Sync] Failed:', err);
     showToast('❌ Sync failed: ' + msg);
-    console.error('syncFromCloud error:', err);
   } finally {
     if (syncBtn) { syncBtn.textContent = '☁️ Sync'; syncBtn.disabled = false; }
   }
 }
 
 async function initAppForUser(session) {
+  console.log('[Init] initAppForUser called with userId =', session && session.userId, 'online =', isOnline());
+
   APP.profile = { name:session.name||(session.email?session.email.split('@')[0]:'Rider'), email:session.email||'' };
   const tplTab = document.getElementById('tab-templates');
   if (tplTab) tplTab.style.display = isAdmin()?'':'none';
@@ -1004,38 +1047,41 @@ async function initAppForUser(session) {
   if (pn) pn.value=session.name||''; if (pe) pe.value=session.email||'';
 
   if (!isOnline()||!session.userId||session.userId==='demo') {
+    console.log('[Init] Offline mode or no userId — using localStorage');
     loadState(); renderAll(); renderTemplates('naked'); renderTypeSwitcher(); return;
   }
 
-  // Try to load from cloud; always call renderAll() whether it succeeds or not
+  // ALWAYS clear in-memory data before fetching from cloud — guarantees no stale data leaks across devices
+  APP.bikes = []; APP.items = []; APP.history = [];
+  console.log('[Init] Cleared in-memory state; fetching from Appwrite for userId =', session.userId);
+
   let cloudLoaded = false;
   try {
     await _fetchCloudData(session.userId);
     saveState();
     cloudLoaded = true;
+    console.log('[Init] ✅ Cloud fetch OK: bikes=' + APP.bikes.length + ', items=' + APP.items.length + ', history=' + APP.history.length);
   } catch(firstErr) {
-    console.warn('initAppForUser first attempt failed:', firstErr.message, 'code:', firstErr.code);
-    // On auth failure: refresh JWT and retry once
-    if (firstErr.code === 401) {
+    console.warn('[Init] First fetch failed:', firstErr.code, firstErr.message);
+    if (firstErr.code === 401 || firstErr.code === 403) {
       try {
         await acquireJwt();
         await _fetchCloudData(session.userId);
         saveState();
         cloudLoaded = true;
+        console.log('[Init] ✅ Cloud fetch OK after JWT refresh');
       } catch(retryErr) {
-        console.warn('initAppForUser retry failed:', retryErr.message);
+        console.warn('[Init] Retry failed:', retryErr.code, retryErr.message);
       }
     }
     if (!cloudLoaded) {
-      loadState(); // fall back to any cached local data
-      // Show sync button prominently so user can retry
+      // Don't use stale localStorage data on a fresh device — empty is more honest
+      console.warn('[Init] Could not load from cloud. Showing empty data.');
       setTimeout(() => {
-        showToast('📵 Using cached data — tap ☁️ Sync to reload from cloud.');
+        showToast('⚠️ Could not load data from cloud. Tap ☁️ Sync to retry.');
       }, 800);
     }
   }
-
-  // ALWAYS render — whether data came from cloud or localStorage
   renderAll(); renderTemplates('naked'); renderTypeSwitcher();
 }
 
@@ -1987,7 +2033,15 @@ async function deleteBike(bikeId) {
   if(!isOnline()){const saved=loadSession();if(saved){hideAuthOverlay();initAppForUser(saved);}else showAuthOverlay();return;}
 
   const saved=loadSession();
-  if(saved&&sessionIsFresh()){AW_SESSION=saved;hideAuthOverlay();initAppForUser(saved);}
+  if(saved&&sessionIsFresh()){
+    AW_SESSION=saved;
+    console.log('[Init] Found saved session for userId =', saved.userId);
+    // Verify with server before showing app — catches stale sessions across devices
+    verifySession().then(ok => {
+      if (ok) { hideAuthOverlay(); initAppForUser(AW_SESSION); }
+      else { clearSession(); showAuthOverlay(); }
+    });
+  }
   else {
     awFetch('GET','/account',null)
       .then(account=>{AW_SESSION={...(saved||{}),userId:account.$id,name:account.name,email:account.email,labels:account.labels||[]};persistSession();hideAuthOverlay();initAppForUser(AW_SESSION);})
