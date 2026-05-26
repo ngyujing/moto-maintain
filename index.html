@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MotoMaintain v20260526-091047</title>
+<title>MotoMaintain v20260526-093109</title>
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2/dist/iife/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -314,7 +314,7 @@ select.form-input option{background:var(--s3)}
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-091047</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-093109</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
       <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
@@ -491,6 +491,9 @@ select.form-input option{background:var(--s3)}
       <div><div class="complete-part-name" style="font-weight:600;font-size:14px;color:var(--text)">Service Item</div><div class="complete-bike-name" style="font-size:12px;color:var(--text3)">—</div></div>
     </div>
     <div class="form-grid">
+      <div class="form-group full"><label class="form-label">What did you do? (select all that apply)</label>
+        <div id="complete-type-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      </div>
       <div class="form-group"><label class="form-label">Mileage at Service (km) *</label><input type="number" class="form-input complete-km-input" placeholder="0"/></div>
       <div class="form-group"><label class="form-label">Service Date *</label><input type="date" class="form-input complete-date-input"/></div>
       <div class="form-group"><label class="form-label">Cost (<span class="currency-display">S$</span>)</label><input type="number" class="form-input complete-cost-input" placeholder="0.00" step="0.01"/></div>
@@ -1013,11 +1016,19 @@ async function _fetchCloudData(userId) {
     serviceType: d.serviceType || 'I',   // backfill old items as Inspect
     remarks:     d.remarks || '',
   }));
-  APP.history = (histRes.documents||[]).map(d=>({
-    id:d.$id, bikeId:d.motorcycleId, itemId:d.maintenanceItemId,
-    partLabel:d.partLabel, partType:d.partType, km:d.mileageAtService,
-    date:d.serviceDate, cost:d.cost||0, notes:d.notes||'', completedAt:d.$createdAt,
-  }));
+  APP.history = (histRes.documents||[]).map(d=>{
+    // Extract performedTypes from notes prefix "[TYPES:R,I] real notes"
+    let rawNotes = d.notes || '';
+    let performedTypes = [];
+    const m = rawNotes.match(/^\[TYPES:([A-Z,]+)\]\s*/);
+    if (m) { performedTypes = m[1].split(','); rawNotes = rawNotes.slice(m[0].length); }
+    return {
+      id:d.$id, bikeId:d.motorcycleId, itemId:d.maintenanceItemId,
+      partLabel:d.partLabel, partType:d.partType, km:d.mileageAtService,
+      date:d.serviceDate, cost:d.cost||0, notes:rawNotes, completedAt:d.$createdAt,
+      performedTypes,
+    };
+  });
 }
 
 // Manual cloud sync — callable from a button or anywhere in the app
@@ -1181,92 +1192,140 @@ async function fetchLatestTemplates(typeKey) {
 
 // ─── BIKE TYPES ───────────────────────────────────────────────────
 const BIKE_TYPES = {
-  sport:{label:'Sport / Supersport',icon:'🏎️',desc:'High-rev engines, track-capable. CBR, ZX, R-series, GSX-R.',source:'Typical Honda CBR / Kawasaki ZX / Yamaha R-series service schedule',items:[
-    {i:'🛢️',n:'Engine Oil',       km:3000, days:180,note:'High-revving engines degrade oil faster'},
-    {i:'🔧',n:'Oil Filter',        km:5000, days:180,note:'Replace every second oil change minimum'},
-    {i:'💨',n:'Air Filter',        km:12000,days:365,note:'Inspect at 6,000 km; replace at 12,000 km'},
-    {i:'⚡',n:'Spark Plugs',       km:8000, days:730,note:'Standard plugs 8,000 km; iridium up to 16,000 km'},
-    {i:'🔴',n:'Brake Pads (Front)',km:8000, days:730,note:'Sport bikes brake harder'},
-    {i:'🔴',n:'Brake Pads (Rear)', km:12000,days:730,note:'Rear pads wear slower on sport bikes'},
-    {i:'💧',n:'Brake Fluid',       km:15000,days:730,note:'DOT 4 absorbs moisture; replace every 2 years'},
-    {i:'⛓️',n:'Chain & Sprockets', km:4000, days:365,note:'Clean and lube every 1,000 km'},
-    {i:'🌡️',n:'Coolant',           km:20000,days:730,note:'Check level monthly; full flush every 2 years'},
-    {i:'⚫',n:'Tires',             km:5000, days:1095,note:'Check tread depth monthly'},
-    {i:'🔋',n:'Battery',           km:0,    days:365,note:'Test voltage annually'},
-    {i:'🛞',n:'Fork Oil',          km:20000,days:730,note:'Degraded fork oil causes poor handling'},
+  // Generic best-practice service intervals from common rider rule-of-thumb
+  // Each item: i=icon, n=name, t=serviceType, km=km interval, days=day interval, note=remark
+  // Some items appear twice (e.g. brake fluid) with different types — that's intentional
+  sport:{label:'Sport / Supersport',icon:'🏎️',desc:'High-rev engines, track-capable. CBR, ZX, R-series, GSX-R.',source:'General sport-bike guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',       t:'R', km:3000, days:180,note:'High-revving engines degrade oil faster'},
+    {i:'🔧',n:'Oil Filter',        t:'R', km:5000, days:180,note:'Replace every second oil change minimum'},
+    {i:'💨',n:'Air Filter',        t:'I', km:6000, days:180,note:'Inspect at 6k km'},
+    {i:'💨',n:'Air Filter',        t:'R', km:12000,days:730,note:'Replace at 12k km'},
+    {i:'⚡',n:'Spark Plugs',       t:'R', km:8000, days:730,note:'Standard plugs 8k km; iridium up to 16k km'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'I', km:4000, days:365,note:'Inspect every 4k km'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'R', km:8000, days:730,note:'Replace when 2mm or less'},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'I', km:6000, days:365,note:'Inspect every 6k km'},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'R', km:12000,days:730,note:'Rear pads wear slower'},
+    {i:'💧',n:'Brake Fluid',       t:'I', km:6000, days:365,note:'Visual check + colour'},
+    {i:'💧',n:'Brake Fluid',       t:'R', km:15000,days:730,note:'DOT 4 absorbs moisture; replace every 2 years'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'L', km:1000, days:30, note:'Clean and lube every 1k km'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'A', km:2000, days:60, note:'Check tension'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'R', km:20000,days:1095,note:'Full chain set replacement'},
+    {i:'🌡️',n:'Coolant',           t:'I', km:5000, days:180,note:'Check level monthly'},
+    {i:'🌡️',n:'Coolant',           t:'R', km:20000,days:730,note:'Full flush every 2 years'},
+    {i:'⚫',n:'Tires',             t:'I', km:1000, days:30, note:'Check tread depth & pressure monthly'},
+    {i:'⚫',n:'Tires',             t:'R', km:8000, days:1095,note:'Sport compound life'},
+    {i:'🔋',n:'Battery',           t:'I', km:0,    days:90, note:'Voltage test quarterly'},
+    {i:'🛞',n:'Fork Oil',          t:'R', km:20000,days:730,note:'Degraded fork oil causes poor handling'},
   ]},
-  naked:{label:'Naked / Street',icon:'🏍️',desc:'All-round street riding. CB, Z, MT, Duke, Street Triple.',source:'Typical Honda CB / Kawasaki Z / Yamaha MT service schedule',items:[
-    {i:'🛢️',n:'Engine Oil',       km:5000, days:180,note:'Standard interval for modern 4-stroke street engines'},
-    {i:'🔧',n:'Oil Filter',        km:5000, days:180,note:'Replace with every oil change'},
-    {i:'💨',n:'Air Filter',        km:15000,days:365,note:'Inspect at 7,500 km; replace at 15,000 km'},
-    {i:'⚡',n:'Spark Plugs',       km:12000,days:730,note:'Iridium plugs standard on modern naked bikes'},
-    {i:'🔴',n:'Brake Pads (Front)',km:10000,days:730,note:'Inspect visually every 5,000 km'},
-    {i:'🔴',n:'Brake Pads (Rear)', km:15000,days:730},
-    {i:'💧',n:'Brake Fluid',       km:20000,days:730,note:'Replace every 2 years regardless of mileage'},
-    {i:'⛓️',n:'Chain & Sprockets', km:5000, days:365,note:'Lube every 500–1,000 km'},
-    {i:'🌡️',n:'Coolant',           km:25000,days:730},
-    {i:'⚫',n:'Tires',             km:10000,days:1095,note:'Varies by compound; check tread depth regularly'},
-    {i:'🔋',n:'Battery',           km:0,    days:365},
-    {i:'🪢',n:'Clutch Cable',      km:20000,days:730,note:'Lubricate every 10,000 km; inspect for fraying'},
+  naked:{label:'Naked / Street',icon:'🏍️',desc:'All-round street riding. CB, Z, MT, Duke, Street Triple.',source:'General street-bike guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',       t:'R', km:5000, days:180,note:'Standard 4-stroke interval'},
+    {i:'🔧',n:'Oil Filter',        t:'R', km:5000, days:180,note:'Replace with every oil change'},
+    {i:'💨',n:'Air Filter',        t:'I', km:7500, days:180,note:'Inspect at 7.5k km'},
+    {i:'💨',n:'Air Filter',        t:'R', km:15000,days:730,note:'Replace at 15k km'},
+    {i:'⚡',n:'Spark Plugs',       t:'R', km:12000,days:730,note:'Iridium plugs standard'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'I', km:5000, days:365,note:'Visual check'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'R', km:10000,days:730,note:'Replace at 2mm'},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'I', km:7500, days:365},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'R', km:15000,days:730},
+    {i:'💧',n:'Brake Fluid',       t:'I', km:7500, days:365,note:'Visual check + colour'},
+    {i:'💧',n:'Brake Fluid',       t:'R', km:20000,days:730,note:'Replace every 2 years'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'L', km:1000, days:30, note:'Lube every 500–1,000 km'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'A', km:2500, days:90, note:'Check tension'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'R', km:25000,days:1095},
+    {i:'🌡️',n:'Coolant',           t:'I', km:10000,days:365},
+    {i:'🌡️',n:'Coolant',           t:'R', km:25000,days:730},
+    {i:'⚫',n:'Tires',             t:'I', km:1000, days:30, note:'Pressure + tread'},
+    {i:'⚫',n:'Tires',             t:'R', km:15000,days:1095},
+    {i:'🔋',n:'Battery',           t:'I', km:0,    days:90, note:'Voltage check'},
+    {i:'🪢',n:'Clutch Cable',      t:'L', km:5000, days:365,note:'Lubricate cable'},
+    {i:'🪢',n:'Clutch Cable',      t:'A', km:10000,days:730,note:'Adjust freeplay'},
   ]},
-  adventure:{label:'Adventure / Touring',icon:'🧭',desc:'Long-distance and dual-sport. Africa Twin, GS, Tiger, Versys.',source:'Typical BMW GS / Honda Africa Twin / Triumph Tiger service schedule',items:[
-    {i:'🛢️',n:'Engine Oil',       km:10000,days:365,note:'Full synthetic oil allows extended 10,000 km intervals'},
-    {i:'🔧',n:'Oil Filter',        km:10000,days:365},
-    {i:'💨',n:'Air Filter',        km:20000,days:365,note:'Halve interval if riding off-road or in dusty conditions'},
-    {i:'⚡',n:'Spark Plugs',       km:16000,days:730,note:'Platinum/iridium plugs used; longer intervals'},
-    {i:'🔴',n:'Brake Pads (Front)',km:15000,days:730},
-    {i:'🔴',n:'Brake Pads (Rear)', km:20000,days:730},
-    {i:'💧',n:'Brake Fluid',       km:20000,days:730},
-    {i:'⛓️',n:'Chain & Sprockets', km:5000, days:365,note:'More frequent if riding off-road'},
-    {i:'🌡️',n:'Coolant',           km:30000,days:1095,note:'OAT coolant lasts 3 years or 30,000 km'},
-    {i:'⚫',n:'Tires',             km:15000,days:1095,note:'Dual-sport tires vary widely by compound'},
-    {i:'🔋',n:'Battery',           km:0,    days:365},
-    {i:'🛞',n:'Fork Oil',          km:20000,days:730},
-    {i:'🔩',n:'Valve Clearance',   km:24000,days:730,note:'Critical on adventure engines running varied fuels'},
+  adventure:{label:'Adventure / Touring',icon:'🧭',desc:'Long-distance and dual-sport. Africa Twin, GS, Tiger, Versys.',source:'General ADV/touring guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',       t:'R', km:10000,days:365,note:'Full synthetic extends interval'},
+    {i:'🔧',n:'Oil Filter',        t:'R', km:10000,days:365},
+    {i:'💨',n:'Air Filter',        t:'I', km:5000, days:180,note:'Halve if off-road / dusty'},
+    {i:'💨',n:'Air Filter',        t:'R', km:20000,days:730},
+    {i:'⚡',n:'Spark Plugs',       t:'R', km:16000,days:730,note:'Platinum/iridium plugs'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'I', km:7500, days:365},
+    {i:'🔴',n:'Brake Pads (Front)',t:'R', km:15000,days:730},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'I', km:10000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'R', km:20000,days:730},
+    {i:'💧',n:'Brake Fluid',       t:'I', km:10000,days:365},
+    {i:'💧',n:'Brake Fluid',       t:'R', km:20000,days:730},
+    {i:'⛓️',n:'Chain & Sprockets', t:'L', km:800,  days:30, note:'More often off-road'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'A', km:2500, days:60},
+    {i:'⛓️',n:'Chain & Sprockets', t:'R', km:25000,days:1095},
+    {i:'🌡️',n:'Coolant',           t:'I', km:10000,days:365},
+    {i:'🌡️',n:'Coolant',           t:'R', km:30000,days:1095,note:'OAT lasts 3 years'},
+    {i:'⚫',n:'Tires',             t:'I', km:1000, days:30},
+    {i:'⚫',n:'Tires',             t:'R', km:15000,days:1095,note:'Dual-sport varies widely'},
+    {i:'🔋',n:'Battery',           t:'I', km:0,    days:90},
+    {i:'🛞',n:'Fork Oil',          t:'R', km:20000,days:730},
+    {i:'🔩',n:'Valve Clearance',   t:'I', km:24000,days:730,note:'Adjust if outside spec'},
   ]},
-  cruiser:{label:'Cruiser',icon:'🛣️',desc:'Low-rpm V-twin cruising. Harley, Indian, Rebel, Vulcan, Bolt.',source:'Typical Harley-Davidson / Honda Rebel / Kawasaki Vulcan service schedule',items:[
-    {i:'🛢️',n:'Engine Oil',       km:8000, days:365,note:'V-twin air-cooled engines: every 8,000 km or 12 months'},
-    {i:'🔧',n:'Oil Filter',        km:8000, days:365},
-    {i:'💨',n:'Air Filter',        km:15000,days:365},
-    {i:'⚡',n:'Spark Plugs',       km:10000,days:730,note:'V-twin engines often use two plugs per cylinder'},
-    {i:'🔴',n:'Brake Pads (Front)',km:20000,days:730,note:'Cruisers brake more gently; longer pad life typical'},
-    {i:'🔴',n:'Brake Pads (Rear)', km:20000,days:730},
-    {i:'💧',n:'Brake Fluid',       km:20000,days:730},
-    {i:'🔗',n:'Drive Belt',        km:30000,days:1095,note:'Belt drive: inspect tension every 5,000 km'},
-    {i:'🌡️',n:'Coolant',           km:25000,days:730,note:'Air-cooled cruisers: skip this item'},
-    {i:'⚫',n:'Tires',             km:15000,days:1095},
-    {i:'🔋',n:'Battery',           km:0,    days:365},
-    {i:'⛽',n:'Primary Chain Lube',km:8000, days:365,note:'Harley primary chaincase oil: every 8,000 km or annually'},
+  cruiser:{label:'Cruiser',icon:'🛣️',desc:'Low-rpm V-twin cruising. Harley, Indian, Rebel, Vulcan, Bolt.',source:'General cruiser guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',       t:'R', km:8000, days:365,note:'V-twin air-cooled standard'},
+    {i:'🔧',n:'Oil Filter',        t:'R', km:8000, days:365},
+    {i:'💨',n:'Air Filter',        t:'I', km:7500, days:180},
+    {i:'💨',n:'Air Filter',        t:'R', km:15000,days:730},
+    {i:'⚡',n:'Spark Plugs',       t:'R', km:10000,days:730,note:'V-twin often uses 2 plugs/cyl'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'I', km:10000,days:365},
+    {i:'🔴',n:'Brake Pads (Front)',t:'R', km:20000,days:730,note:'Cruisers brake gently'},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'I', km:10000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'R', km:20000,days:730},
+    {i:'💧',n:'Brake Fluid',       t:'I', km:10000,days:365},
+    {i:'💧',n:'Brake Fluid',       t:'R', km:20000,days:730},
+    {i:'🔗',n:'Drive Belt',        t:'I', km:5000, days:180,note:'Check tension'},
+    {i:'🔗',n:'Drive Belt',        t:'R', km:30000,days:1095},
+    {i:'🌡️',n:'Coolant',           t:'I', km:10000,days:365,note:'Skip on air-cooled'},
+    {i:'🌡️',n:'Coolant',           t:'R', km:25000,days:730},
+    {i:'⚫',n:'Tires',             t:'I', km:1000, days:30},
+    {i:'⚫',n:'Tires',             t:'R', km:15000,days:1095},
+    {i:'🔋',n:'Battery',           t:'I', km:0,    days:90},
+    {i:'⛽',n:'Primary Chain Lube',t:'L', km:8000, days:365,note:'Harley primary chaincase oil'},
   ]},
-  scooter:{label:'Scooter / Commuter',icon:'🛵',desc:'CVT automatic city bikes. PCX, NMAX, Vario, Click, Vision.',source:'Typical Honda PCX / Yamaha NMAX / Honda BeAT service schedule',items:[
-    {i:'🛢️',n:'Engine Oil',       km:2000, days:90, note:'Small-displacement engines: 2,000 km or 3 months'},
-    {i:'🔧',n:'Oil Filter',        km:4000, days:180,note:'Replace every other oil change'},
-    {i:'💨',n:'Air Filter',        km:8000, days:365,note:'City riding = dusty; inspect at 4,000 km'},
-    {i:'⚡',n:'Spark Plug',        km:6000, days:365,note:'Single plug; replace at first sign of hard starting'},
-    {i:'🔴',n:'Brake Pads (Front)',km:10000,days:730},
-    {i:'🔴',n:'Brake Pads (Rear)', km:10000,days:730},
-    {i:'💧',n:'Brake Fluid',       km:15000,days:730},
-    {i:'⚙️',n:'CVT Drive Belt',    km:12000,days:730,note:'Critical: worn belt causes power loss and slip'},
-    {i:'🔘',n:'CVT Roller Weights',km:10000,days:730,note:'Flat or worn rollers cause poor acceleration'},
-    {i:'🧴',n:'Transmission Oil',  km:5000, days:365,note:'Separate gearbox oil — often overlooked'},
-    {i:'⚫',n:'Tires',             km:8000, days:1095,note:'Small wheels wear faster; check pressure weekly'},
-    {i:'🔋',n:'Battery',           km:0,    days:365},
+  scooter:{label:'Scooter / Commuter',icon:'🛵',desc:'CVT automatic city bikes. PCX, NMAX, Vario, Click, Vision.',source:'General small-displacement scooter guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',       t:'R', km:2000, days:90, note:'Small engines: short intervals'},
+    {i:'🔧',n:'Oil Filter',        t:'R', km:4000, days:180,note:'Every other oil change'},
+    {i:'💨',n:'Air Filter',        t:'I', km:4000, days:180,note:'City riding = dusty'},
+    {i:'💨',n:'Air Filter',        t:'R', km:8000, days:365},
+    {i:'⚡',n:'Spark Plug',        t:'R', km:6000, days:365,note:'Single plug'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'I', km:5000, days:365},
+    {i:'🔴',n:'Brake Pads (Front)',t:'R', km:10000,days:730},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'I', km:5000, days:365},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'R', km:10000,days:730},
+    {i:'💧',n:'Brake Fluid',       t:'I', km:7500, days:365},
+    {i:'💧',n:'Brake Fluid',       t:'R', km:15000,days:730},
+    {i:'⚙️',n:'CVT Drive Belt',    t:'I', km:6000, days:365,note:'Inspect for wear/cracks'},
+    {i:'⚙️',n:'CVT Drive Belt',    t:'R', km:12000,days:730,note:'Critical: power loss if worn'},
+    {i:'🔘',n:'CVT Roller Weights',t:'R', km:10000,days:730,note:'Flat rollers = poor accel'},
+    {i:'🧴',n:'Transmission Oil',  t:'R', km:5000, days:365,note:'Separate gearbox oil — often overlooked'},
+    {i:'⚫',n:'Tires',             t:'I', km:1000, days:7,  note:'Small wheels wear faster; weekly check'},
+    {i:'⚫',n:'Tires',             t:'R', km:8000, days:1095},
+    {i:'🔋',n:'Battery',           t:'I', km:0,    days:90},
   ]},
-  offroad:{label:'Off-road / Dirt',icon:'🏔️',desc:'Motocross, enduro, trail. CRF, KX, YZ, WR, KTM EXC.',source:'Typical Honda CRF / Yamaha WR / KTM EXC service schedule',items:[
-    {i:'🛢️',n:'Engine Oil',       km:1000, days:90, note:'Extreme loads: change after every 1–2 rides. Non-negotiable.'},
-    {i:'🔧',n:'Oil Filter',        km:2000, days:90},
-    {i:'💨',n:'Air Filter',        km:500,  days:30, note:'Clean after EVERY ride in dusty/muddy conditions.'},
-    {i:'⚡',n:'Spark Plug',        km:5000, days:365,note:'Inspect every 2,500 km'},
-    {i:'🔴',n:'Brake Pads (Front)',km:5000, days:365,note:'Hard braking in terrain; inspect monthly'},
-    {i:'🔴',n:'Brake Pads (Rear)', km:4000, days:365,note:'Rear brakes take more abuse off-road'},
-    {i:'💧',n:'Brake Fluid',       km:10000,days:365},
-    {i:'⛓️',n:'Chain & Sprockets', km:1000, days:90, note:'Clean and lube after every ride.'},
-    {i:'🌡️',n:'Coolant',           km:10000,days:365},
-    {i:'🛞',n:'Fork Oil',          km:5000, days:365,note:'Dirt bikes take huge suspension hits'},
-    {i:'🔩',n:'Valve Clearance',   km:10000,days:365,note:'High-compression engines: check clearance every season'},
-    {i:'🔋',n:'Battery',           km:0,    days:365,note:'Electric-start models; kick-start bikes can skip this'},
+  offroad:{label:'Off-road / Dirt',icon:'🏔️',desc:'Motocross, enduro, trail. CRF, KX, YZ, WR, KTM EXC.',source:'General off-road/MX guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',       t:'R', km:1000, days:90, note:'After every 1–2 rides. Non-negotiable.'},
+    {i:'🔧',n:'Oil Filter',        t:'R', km:2000, days:90},
+    {i:'💨',n:'Air Filter',        t:'C', km:500,  days:14, note:'Clean after EVERY dusty ride'},
+    {i:'💨',n:'Air Filter',        t:'R', km:5000, days:180},
+    {i:'⚡',n:'Spark Plug',        t:'I', km:2500, days:180},
+    {i:'⚡',n:'Spark Plug',        t:'R', km:5000, days:365},
+    {i:'🔴',n:'Brake Pads (Front)',t:'I', km:1000, days:30, note:'Check monthly'},
+    {i:'🔴',n:'Brake Pads (Front)',t:'R', km:5000, days:365},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'I', km:1000, days:30, note:'Rear takes abuse off-road'},
+    {i:'🔴',n:'Brake Pads (Rear)', t:'R', km:4000, days:365},
+    {i:'💧',n:'Brake Fluid',       t:'R', km:10000,days:365},
+    {i:'⛓️',n:'Chain & Sprockets', t:'L', km:200,  days:7,  note:'After every ride'},
+    {i:'⛓️',n:'Chain & Sprockets', t:'A', km:500,  days:14},
+    {i:'⛓️',n:'Chain & Sprockets', t:'R', km:8000, days:730},
+    {i:'🌡️',n:'Coolant',           t:'R', km:10000,days:365},
+    {i:'🛞',n:'Fork Oil',          t:'R', km:5000, days:365,note:'Dirt bikes take huge suspension hits'},
+    {i:'🔩',n:'Valve Clearance',   t:'I', km:10000,days:365,note:'Every season'},
+    {i:'🔋',n:'Battery',           t:'I', km:0,    days:90, note:'Electric-start models'},
   ]},
 };
+
 
 // ─── STATE PERSISTENCE ────────────────────────────────────────────
 let activeTemplateType = 'naked';
@@ -1332,7 +1391,7 @@ function estimateItemsForBike(bike,typeKey) {
     if (kmInt>0&&bike.km>0){lastKm=Math.floor(bike.km/kmInt)*kmInt;nextKm=lastKm+kmInt;}
     const nd=new Date();nd.setDate(nd.getDate()+dayInt);
     const nextDate=nd.toISOString().split('T')[0];
-    const item={id:uid(),bikeId:bike.id,partType:t.partType||t.i,partLabel:t.n,intervalKm:kmInt,intervalDays:dayInt,lastKm,lastDate:null,nextKm,nextDate,note:t.note||''};
+    const item={id:uid(),bikeId:bike.id,partType:t.partType||t.i,partLabel:t.n,intervalKm:kmInt,intervalDays:dayInt,lastKm,lastDate:null,nextKm,nextDate,note:t.note||'',serviceType:t.t||'I',remarks:t.note||''};
     item.status=calcStatus(item,bike.km);
     return item;
   });
@@ -1347,7 +1406,7 @@ function buildItemsFromPending(bike,pendingItems) {
     let lastKm=null,nextKm=null;
     if (kmInt>0&&bike.km>0){lastKm=Math.floor(bike.km/kmInt)*kmInt;nextKm=lastKm+kmInt;}
     const nd=new Date();nd.setDate(nd.getDate()+dayInt);
-    const item={id:uid(),bikeId:bike.id,partType:pi.type,partLabel:pi.label,intervalKm:kmInt,intervalDays:dayInt,lastKm,lastDate:null,nextKm,nextDate:nd.toISOString().split('T')[0],note:pi.note||''};
+    const item={id:uid(),bikeId:bike.id,partType:pi.type,partLabel:pi.label,intervalKm:kmInt,intervalDays:dayInt,lastKm,lastDate:null,nextKm,nextDate:nd.toISOString().split('T')[0],note:pi.note||'',serviceType:pi.serviceType||'I',remarks:pi.remarks||pi.note||''};
     item.status=calcStatus(item,bike.km);
     return item;
   });
@@ -1407,6 +1466,9 @@ async function submitAddBike() {
 // ─── COMPLETE SERVICE ─────────────────────────────────────────────
 let _completeItemId = null;
 
+// Tracks which type chips are selected in the complete modal
+let _completeSelectedTypes = [];
+
 function openCompleteModal(itemId) {
   _completeItemId=itemId;
   const item=APP.items.find(i=>i.id===itemId);
@@ -1419,7 +1481,28 @@ function openCompleteModal(itemId) {
   m.querySelector('.complete-date-input').value=new Date().toISOString().split('T')[0];
   m.querySelector('.complete-cost-input').value='';
   m.querySelector('.complete-notes-input').value='';
+
+  // Default selection: item's own type. User can multi-select more.
+  _completeSelectedTypes = [item.serviceType || 'I'];
+  renderCompleteTypeChips();
   openModal('complete');
+}
+
+function renderCompleteTypeChips() {
+  const wrap = document.getElementById('complete-type-chips');
+  if (!wrap) return;
+  wrap.innerHTML = ['I','C','R','A','L'].map(t => {
+    const st = SERVICE_TYPES[t];
+    const on = _completeSelectedTypes.includes(t);
+    return `<button type="button" onclick="toggleCompleteType('${t}')" style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;border:1.5px solid ${on?st.color:'var(--border)'};background:${on?st.color+'22':'transparent'};color:${on?st.color:'var(--text2)'};font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s"><span style="font-size:13px;font-weight:800">${t}</span>${st.label}</button>`;
+  }).join('');
+}
+
+function toggleCompleteType(t) {
+  const i = _completeSelectedTypes.indexOf(t);
+  if (i >= 0) _completeSelectedTypes.splice(i, 1);
+  else _completeSelectedTypes.push(t);
+  renderCompleteTypeChips();
 }
 
 async function doCompleteService() {
@@ -1438,13 +1521,17 @@ async function doCompleteService() {
     nextDate:(()=>{const d=new Date(date);d.setDate(d.getDate()+item.intervalDays);return d.toISOString().split('T')[0];})(),
   };
   updatedItem.status=calcStatus(updatedItem,bike?Math.max(bike.km,km):km);
-  const newRecord={id:uid(),bikeId:item.bikeId,itemId:item.id,partLabel:item.partLabel,partType:item.partType,km,date,cost,notes,completedAt:new Date().toISOString()};
+  // Multi-select types performed in this service
+  if (_completeSelectedTypes.length === 0) { showToast('⚠️ Pick at least one service type performed'); return; }
+  const performedTypes = _completeSelectedTypes.slice();
+  const newRecord={id:uid(),bikeId:item.bikeId,itemId:item.id,partLabel:item.partLabel,partType:item.partType,km,date,cost,notes,completedAt:new Date().toISOString(),performedTypes:performedTypes.join(',')};
 
   if (isOnline()&&AW_SESSION) {
     const saveBtn=m.querySelector('.btn-primary');
     if (saveBtn){saveBtn.textContent='Saving…';saveBtn.style.pointerEvents='none';}
     try {
-      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:newRecord.notes||null},newRecord.id);
+      const notesWithTypes = '[TYPES:'+performedTypes.join(',')+'] '+(newRecord.notes||'');
+      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
       await awUpdate('maintenance_items',updatedItem.id,{
         lastServiceKm:updatedItem.lastKm, lastServiceDate:updatedItem.lastDate,
         nextDueKm:       updatedItem.nextKm   ?? null,
@@ -1704,6 +1791,7 @@ function renderMaintenance(bikeId) {
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${serviceTypeBadge(item.serviceType)}<span class="svc-name">${item.partLabel}</span>${badge(item.status)}</div>
             <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">✓ Mark Done</button>
           </div>
+          <div style="font-size:11px;color:${(SERVICE_TYPES[item.serviceType||'I']||SERVICE_TYPES.I).color};margin-top:4px;font-weight:600">Type: ${item.serviceType||'I'} (${(SERVICE_TYPES[item.serviceType||'I']||SERVICE_TYPES.I).label}) due</div>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 16px;margin-top:6px;font-size:12px;color:var(--text3)">
             <span>Last: <span class="km-val">${fmtKm(item.lastKm)}</span></span>
             <span>Due: <span class="km-val">${item.nextKm?fmtKm(item.nextKm):fmtDate(item.nextDate)}</span></span>
@@ -1742,7 +1830,7 @@ function renderHistory() {
   if(countEl) countEl.textContent=records.length;
   if(spendEl) spendEl.innerHTML=`<span class="currency-display">${getCurrency()}</span> ${totalCost.toFixed(2)}`;
   if (records.length===0){listEl.innerHTML=`<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">📋</div><p style="color:var(--text3)">No service records yet. Mark maintenance items as done to start tracking history.</p></div>`;return;}
-  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);return `<div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${(()=>{const it=APP.items.find(i=>i.id===h.itemId);return it?serviceTypeBadge(it.serviceType):'';})()}<span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details"><span>📍 ${fmtKm(h.km)}</span>${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
+  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);return `<div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${(()=>{const types=(h.performedTypes&&h.performedTypes.length)?h.performedTypes:(()=>{const it=APP.items.find(i=>i.id===h.itemId);return it?[it.serviceType||'I']:['I'];})();return types.map(t=>serviceTypeBadge(t)).join(' ');})()}<span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details"><span>📍 ${fmtKm(h.km)}</span>${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
 }
 
 async function deleteServiceRecord(recordId) {
@@ -1982,7 +2070,7 @@ function addBikeStep3(){
   const dot3=document.getElementById('add-step-dot-3'); if(dot3) dot3.style.background='var(--brand)';
   fetchLatestTemplates(selectedBikeType).then(latestItems=>{
     const base=latestItems||(BIKE_TYPES[selectedBikeType]?BIKE_TYPES[selectedBikeType].items:[]);
-    _pendingItems=base.map((t,idx)=>({_id:'pi_'+idx,icon:t.i||'🔧',label:t.n,type:t.partType||('custom_'+idx),km:t.km||0,days:t.days||365,note:t.note||'',enabled:true,isCustom:false}));
+    _pendingItems=base.map((t,idx)=>({_id:'pi_'+idx,icon:t.i||'🔧',label:t.n,type:t.partType||('custom_'+idx),km:t.km||0,days:t.days||365,note:t.note||'',enabled:true,isCustom:false,serviceType:t.t||'I',remarks:t.note||''}));
     renderPendingItems();
   });
 }
@@ -1993,14 +2081,30 @@ function renderPendingItems(){
   list.innerHTML='';
   _pendingItems.forEach((item,idx)=>{
     const row=document.createElement('div'); row.className='ci-row'+(item.enabled?'':' disabled');
-    const namePart=item.isCustom?`<input class="form-input ci-name" style="flex:1;padding:4px 6px;font-size:12px" value="${item.label.replace(/"/g,'&quot;')}" placeholder="Part name" oninput="_pendingItems[${idx}].label=this.value"/>`:`<span class="ci-name">${item.label}</span>`;
-    row.innerHTML=`<span class="ci-icon">${item.icon}</span>${namePart}<input class="ci-input" type="number" min="0" step="500" value="${item.km}" title="km interval" oninput="_pendingItems[${idx}].km=parseInt(this.value)||0"/><span class="ci-unit">km</span><input class="ci-input" type="number" min="1" step="1" value="${item.days}" title="day interval" oninput="_pendingItems[${idx}].days=parseInt(this.value)||1"/><span class="ci-unit">days</span><button class="ci-toggle${item.enabled?' on':''}" title="${item.enabled?'Enabled':'Disabled'}" onclick="togglePendingItem(${idx})"></button>${item.isCustom?`<button class="ci-del" onclick="deletePendingItem(${idx})" title="Remove row">✕</button>`:'<span style="width:22px"></span>'}`;
+    row.style.cssText='flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);align-items:center';
+    const namePart=item.isCustom?`<input class="form-input" style="flex:1;min-width:120px;padding:4px 6px;font-size:12px" value="${item.label.replace(/"/g,'&quot;')}" placeholder="Part name" oninput="_pendingItems[${idx}].label=this.value"/>`:`<span style="flex:1;min-width:120px;font-size:13px;color:var(--text)">${item.label}</span>`;
+    const typeOpts=['I','C','R','A','L'].map(t=>`<option value="${t}" ${(item.serviceType||'I')===t?'selected':''}>${t}</option>`).join('');
+    row.innerHTML=`
+      <div style="display:flex;align-items:center;gap:6px;width:100%">
+        <span class="ci-icon">${item.icon}</span>
+        ${namePart}
+        <select class="form-input" style="width:auto;padding:4px 6px;font-size:11px;min-width:55px" onchange="_pendingItems[${idx}].serviceType=this.value">${typeOpts}</select>
+        <button class="ci-toggle${item.enabled?' on':''}" title="${item.enabled?'Enabled':'Disabled'}" onclick="togglePendingItem(${idx})"></button>
+        ${item.isCustom?`<button class="ci-del" onclick="deletePendingItem(${idx})" title="Remove">✕</button>`:'<span style="width:22px"></span>'}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;width:100%;margin-top:5px">
+        <input class="ci-input" type="number" min="0" step="500" value="${item.km}" title="km interval" oninput="_pendingItems[${idx}].km=parseInt(this.value)||0"/>
+        <span class="ci-unit">km</span>
+        <input class="ci-input" type="number" min="1" step="1" value="${item.days}" title="day interval" oninput="_pendingItems[${idx}].days=parseInt(this.value)||1"/>
+        <span class="ci-unit">days</span>
+        <input class="form-input" style="flex:1;min-width:100px;padding:4px 6px;font-size:11px" placeholder="Remarks" value="${(item.remarks||'').replace(/"/g,'&quot;')}" oninput="_pendingItems[${idx}].remarks=this.value"/>
+      </div>`;
     list.appendChild(row);
   });
 }
 function togglePendingItem(idx){_pendingItems[idx].enabled=!_pendingItems[idx].enabled;renderPendingItems();}
 function deletePendingItem(idx){_pendingItems.splice(idx,1);renderPendingItems();}
-function addCustomIntervalRow(){_pendingItems.push({_id:'ci_'+Date.now(),icon:'🔧',label:'',type:'custom_'+Date.now(),km:5000,days:365,note:'',enabled:true,isCustom:true});renderPendingItems();const list=document.getElementById('custom-intervals-list');if(list)setTimeout(()=>{list.scrollTop=list.scrollHeight;},50);}
+function addCustomIntervalRow(){_pendingItems.push({_id:'ci_'+Date.now(),icon:'🔧',label:'',type:'custom_'+Date.now(),km:5000,days:365,note:'',enabled:true,isCustom:true,serviceType:'I',remarks:''});renderPendingItems();const list=document.getElementById('custom-intervals-list');if(list)setTimeout(()=>{list.scrollTop=list.scrollHeight;},50);}
 
 // ─── TEMPLATES ────────────────────────────────────────────────────
 function renderTemplates(typeKey) {
