@@ -873,7 +873,7 @@ const Q = {
   limit:     (n)   => Appwrite.Query.limit(n),
 };
 async function awCreate(collection,data,docId) {
-  return awFetch('POST',`/databases/${APPWRITE_DATABASE}/collections/${collection}/documents`,{documentId:docId||'unique()',data,permissions:[]});
+  return awFetch('POST',`/databases/${APPWRITE_DATABASE}/collections/${collection}/documents`,{documentId:docId||'unique()',data});
 }
 async function awUpdate(collection,docId,data) {
   return awFetch('PATCH',`/databases/${APPWRITE_DATABASE}/collections/${collection}/documents/${docId}`,{data});
