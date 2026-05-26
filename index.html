@@ -654,16 +654,19 @@ async function awFetch(method, path, body) {
     'Content-Type':       'application/json',
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
-  // Prefer JWT (most reliable on Safari/iOS — header, not cookie)
+
+  // Pick EXACTLY ONE auth method — Appwrite v1.6+ rejects mixed auth (JWT + cookie).
+  // Priority: JWT > session secret > cookie. Use credentials:omit when we have a header.
+  let useCookies = true;
   if (AW_SESSION && AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now() < AW_SESSION.jwtExpiry) {
     headers['X-Appwrite-JWT'] = AW_SESSION.jwt;
-  }
-  // Also send session secret if we have it (some endpoints prefer it)
-  if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
+    useCookies = false;
+  } else if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
     headers['X-Appwrite-Session'] = AW_SESSION.secret;
+    useCookies = false;
   }
 
-  const opts = { method, headers, credentials:'include' };
+  const opts = { method, headers, credentials: useCookies ? 'include' : 'omit' };
   if (body !== null && body !== undefined) opts.body = JSON.stringify(body);
 
   let res;
