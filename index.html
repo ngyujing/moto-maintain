@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MotoMaintain v20260526-073819</title>
+<title>MotoMaintain v20260526-091047</title>
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2/dist/iife/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -314,7 +314,7 @@ select.form-input option{background:var(--s3)}
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-073819</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-091047</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
       <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
@@ -594,6 +594,19 @@ const STATUS_CFG = {
   up_to_date:     { order:2 },
   never_serviced: { order:3 },
 };
+
+// Honda-style service type codes
+const SERVICE_TYPES = {
+  I: { label: 'Inspect',   full: 'Inspect — and clean, adjust, lubricate, or replace if necessary', color: 'var(--cyan)' },
+  C: { label: 'Clean',     full: 'Clean', color: 'var(--brand)' },
+  R: { label: 'Replace',   full: 'Replace', color: 'var(--red)' },
+  A: { label: 'Adjust',    full: 'Adjust', color: 'var(--amber)' },
+  L: { label: 'Lubricate', full: 'Lubricate', color: 'var(--green)' },
+};
+function serviceTypeBadge(code) {
+  const t = SERVICE_TYPES[code] || SERVICE_TYPES.I;
+  return `<span title="${t.full}" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:${t.color}25;color:${t.color};font-family:'Exo 2',sans-serif;font-size:11px;font-weight:800;border:1px solid ${t.color}44">${code||'I'}</span>`;
+}
 
 // ─── HELPER FUNCTIONS ─────────────────────────────────────────────
 function getCurrency() { return CURRENCY_SYMBOLS[currentCurrency] || currentCurrency; }
@@ -997,6 +1010,8 @@ async function _fetchCloudData(userId) {
     lastKm:d.lastServiceKm, lastDate:d.lastServiceDate,
     nextKm:d.nextDueKm, nextDate:d.nextDueDate,
     status:d.serviceStatus||'never_serviced', note:'', isCustom:d.isCustomInterval||false,
+    serviceType: d.serviceType || 'I',   // backfill old items as Inspect
+    remarks:     d.remarks || '',
   }));
   APP.history = (histRes.documents||[]).map(d=>({
     id:d.$id, bikeId:d.motorcycleId, itemId:d.maintenanceItemId,
@@ -1117,6 +1132,8 @@ async function syncItemCreate(item) {
       // ▼ PATCH 1
       serviceStatus:   item.status    || 'never_serviced',
       isCustomInterval: item.isCustom || false,
+      serviceType:     item.serviceType || 'I',
+      remarks:         item.remarks || '',
     });
     return true;
   } catch(err) { console.error('syncItemCreate failed:',err.message,'code:',err.code); showToast('⚠️ Service item not saved: '+(err.message||'error')); return false; }
@@ -1134,6 +1151,8 @@ async function syncItemUpdate(item) {
       // ▼ PATCH 2
       serviceStatus:   item.status    || 'never_serviced',
       isCustomInterval: item.isCustom || false,
+      serviceType:     item.serviceType || 'I',
+      remarks:         item.remarks || '',
     });
   } catch(err){ console.error('syncItemUpdate failed:',err.message,err.code); }
 }
@@ -1361,6 +1380,8 @@ async function submitAddBike() {
         // ▼ PATCH 4
         serviceStatus:   item.status   || 'never_serviced',
         isCustomInterval: item.isCustom || false,
+        serviceType:     item.serviceType || 'I',
+        remarks:         item.remarks || '',
       },item.id)));
     } catch(err) {
       if (btn){btn.textContent='✓ Add Motorcycle';btn.style.pointerEvents='';}
@@ -1680,7 +1701,7 @@ function renderMaintenance(bikeId) {
         <span class="svc-icon">${icon(item.partType)}</span>
         <div style="flex:1">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:8px"><span class="svc-name">${item.partLabel}</span>${badge(item.status)}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${serviceTypeBadge(item.serviceType)}<span class="svc-name">${item.partLabel}</span>${badge(item.status)}</div>
             <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">✓ Mark Done</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 16px;margin-top:6px;font-size:12px;color:var(--text3)">
@@ -1690,6 +1711,7 @@ function renderMaintenance(bikeId) {
             <span>Date due: ${fmtDate(item.nextDate)}</span>
           </div>
           ${progress(item,bike.km)}
+          ${item.remarks?`<div style="font-size:11px;color:var(--brand);margin-top:4px"><strong>Note:</strong> ${item.remarks}</div>`:''}
           ${item.note?`<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${item.note}</div>`:''}
         </div>
       </div>`).join('')}</div>`;
@@ -1720,7 +1742,7 @@ function renderHistory() {
   if(countEl) countEl.textContent=records.length;
   if(spendEl) spendEl.innerHTML=`<span class="currency-display">${getCurrency()}</span> ${totalCost.toFixed(2)}`;
   if (records.length===0){listEl.innerHTML=`<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">📋</div><p style="color:var(--text3)">No service records yet. Mark maintenance items as done to start tracking history.</p></div>`;return;}
-  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);return `<div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span><span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details"><span>📍 ${fmtKm(h.km)}</span>${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
+  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);return `<div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${(()=>{const it=APP.items.find(i=>i.id===h.itemId);return it?serviceTypeBadge(it.serviceType):'';})()}<span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details"><span>📍 ${fmtKm(h.km)}</span>${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
 }
 
 async function deleteServiceRecord(recordId) {
@@ -1783,12 +1805,42 @@ function renderEiList() {
   list.innerHTML='';
   _eiItems.forEach((item,idx)=>{
     const row=document.createElement('div'); row.className='ci-row'; row.dataset.idx=idx;
+    row.style.cssText='flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border)';
     const isCustom=!!(item.isCustom);
-    const namePart=isCustom?`<input class="form-input ci-name" style="flex:1;padding:4px 6px;font-size:12px" value="${item.partLabel.replace(/"/g,'&quot;')}" placeholder="Part name" oninput="_eiItems[${idx}].partLabel=this.value"/>`:`<span class="ci-name">${item.partLabel}</span>`;
-    row.innerHTML=`<span class="ci-icon">${icon(item.partType)}</span>${namePart}<input class="ci-input" type="number" min="0" step="500" value="${item.intervalKm||0}" title="km interval" oninput="_eiItems[${idx}].intervalKm=parseInt(this.value)||0"/><span class="ci-unit">km</span><input class="ci-input" type="number" min="1" step="1" value="${item.intervalDays||365}" title="day interval" oninput="_eiItems[${idx}].intervalDays=parseInt(this.value)||1"/><span class="ci-unit">days</span><button class="ci-del" onclick="removeEiItem(${idx})" title="Remove">✕</button>`;
+    const typeOptions=['I','C','R','A','L'].map(t=>{
+      const sel=(item.serviceType||'I')===t?'selected':'';
+      return `<option value="${t}" ${sel}>${t} — ${SERVICE_TYPES[t].label}</option>`;
+    }).join('');
+    const namePart=isCustom
+      ? `<input class="form-input" style="flex:1;min-width:140px;padding:5px 8px;font-size:12px" value="${(item.partLabel||'').replace(/"/g,'&quot;')}" placeholder="Part name" oninput="_eiItems[${idx}].partLabel=this.value"/>`
+      : `<span style="flex:1;min-width:140px;font-size:13px;font-weight:500;color:var(--text)">${item.partLabel}</span>`;
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;width:100%">
+        <span class="ci-icon">${icon(item.partType)}</span>
+        ${namePart}
+        <select class="form-input" style="width:auto;padding:5px 8px;font-size:11px;min-width:80px"
+                onchange="_eiItems[${idx}].serviceType=this.value">${typeOptions}</select>
+        <button class="ci-del" onclick="removeEiItem(${idx})" title="Remove">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;flex-wrap:wrap">
+        <input class="ci-input" type="number" min="0" step="500" value="${item.intervalKm||0}" title="km interval" oninput="_eiItems[${idx}].intervalKm=parseInt(this.value)||0"/>
+        <span class="ci-unit">km</span>
+        <input class="ci-input" type="number" min="1" step="1" value="${item.intervalDays||365}" title="day interval" oninput="_eiItems[${idx}].intervalDays=parseInt(this.value)||1"/>
+        <span class="ci-unit">days</span>
+        <input class="form-input" style="flex:1;min-width:120px;padding:5px 8px;font-size:11px" placeholder="Remarks (e.g. '2 year')" value="${(item.remarks||'').replace(/"/g,'&quot;')}" oninput="_eiItems[${idx}].remarks=this.value"/>
+        <button class="btn btn-secondary btn-sm" style="padding:4px 8px;font-size:11px" onclick="dupEiRow(${idx})" title="Add another type for this item">＋ Type</button>
+      </div>`;
     list.appendChild(row);
   });
   if(_eiItems.length===0) list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No service items. Add one below.</div>';
+}
+
+function dupEiRow(idx) {
+  const src = _eiItems[idx];
+  const copy = {...src, id:'ei_'+uid(), serviceType:'R', isCustom:true,
+    lastKm:null, lastDate:null, nextKm:null, nextDate:null, status:'never_serviced'};
+  _eiItems.splice(idx+1, 0, copy);
+  renderEiList();
 }
 
 function removeEiItem(idx){_eiItems.splice(idx,1);renderEiList();}
@@ -1838,6 +1890,7 @@ async function saveEditIntervals() {
           nextDueKm:i.nextKm??null,nextDueDate:i.nextDate||null,
           // ▼ PATCH 6
           serviceStatus: i.status, isCustomInterval: i.isCustom||false,
+          serviceType: i.serviceType || 'I', remarks: i.remarks || '',
         })),
         ...newItems.map(i=>awCreate('maintenance_items',{
           motorcycleId:i.bikeId,userId:AW_SESSION.userId,
@@ -1847,6 +1900,7 @@ async function saveEditIntervals() {
           nextDueKm:i.nextKm??null,nextDueDate:i.nextDate||null,
           // ▼ PATCH 7
           serviceStatus: i.status, isCustomInterval: true,
+          serviceType: i.serviceType || 'I', remarks: i.remarks || '',
         },i.id)),
       ]);
     } catch(err){
