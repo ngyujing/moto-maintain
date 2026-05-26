@@ -737,6 +737,7 @@ function loadSession() {
     if(raw){
       const d=JSON.parse(raw);
       AW_SESSION=d;
+      _sdkSetSession(d.secret);
       // Only keep JWT if it hasn't expired
       if (d.jwt && d.jwtExpiry && Date.now() < d.jwtExpiry) {
         AW_SESSION.jwt = d.jwt; AW_SESSION.jwtExpiry = d.jwtExpiry;
@@ -796,8 +797,7 @@ async function doLogin() {
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION);
   } catch(err) {
     if (err.code===0) showAuthError(err.message);
-    // 401 here = session creation failed = wrong password (GET /account 401 is handled above)
-    else if (err.code===401) { try{await awFetch('DELETE','/account/sessions/current',null);}catch{} clearSession(); showAuthError('Incorrect email or password. Please try again.'); }
+    else if (err.code===401||err.code===400) { clearSession(); showAuthError('Incorrect email or password. Please try again.'); }
     else if (err.code===429) showAuthError('Too many attempts. Please wait and try again.');
     else showAuthError((err.message||'Login failed.')+(err.code?' ['+err.code+']':''));
   } finally { setAuthLoading(false); }
@@ -813,17 +813,13 @@ async function doRegister() {
   setAuthLoading(true);
   try {
     if (!isOnline()) { clearAuthError(); hideAuthOverlay(); initAppForUser({name,email,labels:[],userId:btoa(email).replace(/=/g,'')}); return; }
-    await awFetch('POST','/account',{userId:'unique()',name,email,password:pw});
-    try{await awFetch('DELETE','/account/sessions/current',null);}catch{}
-    const regSession = await awFetch('POST','/account/sessions/email',{email,password:pw});
-    // Don't call GET /account — we already have name/email from the form.
-    // Calling GET /account requires cookie auth which mobile browsers often block cross-origin.
-    const secret  = (regSession.secret && regSession.secret.length > 0) ? regSession.secret : '';
-    const userId  = regSession.userId || regSession.$id || '';
-    saveSession({userId, sessionId:regSession.$id||'', secret, name, email, labels:[]});
-    AW_SESSION = {secret, userId, name, email, labels:[]};
-    await acquireJwt(); // get JWT while session cookie is freshest
-    saveSession({userId, sessionId:regSession.$id||'', secret, name, email, labels:[]});
+    const sdkAccount = new Appwrite.Account(_SDK);
+    await sdkAccount.create('unique()', email, pw, name);
+    try { await sdkAccount.deleteSession('current'); } catch {}
+    const regSession = await sdkAccount.createEmailPasswordSession(email, pw);
+    _sdkSetSession(regSession.secret);
+    AW_SESSION = {secret:regSession.secret||'', userId:regSession.userId||'', name, email, labels:[]};
+    saveSession(AW_SESSION);
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION); return;
   } catch(err) {
     if (err.type==='user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
@@ -832,7 +828,7 @@ async function doRegister() {
 }
 
 async function doLogout() {
-  if (isOnline()&&AW_SESSION) { try{await awFetch('DELETE','/account/sessions/current',null);}catch{} }
+  if (isOnline()&&AW_SESSION) { try{await new Appwrite.Account(_SDK).deleteSession('current');}catch{} }
   document.cookie='a_session_'+APPWRITE_PROJECT_ID+'=; Max-Age=0; path=/; SameSite=None; Secure';
   clearSession();
   APP.bikes=[]; APP.items=[]; APP.history=[]; APP.nextId=1; APP.profile={name:'Rider',email:''};
@@ -1939,7 +1935,7 @@ async function deleteBike(bikeId) {
   if(!isOnline()){const saved=loadSession();if(saved){hideAuthOverlay();initAppForUser(saved);}else showAuthOverlay();return;}
 
   const saved=loadSession();
-  if(saved&&sessionIsFresh()){AW_SESSION=saved;hideAuthOverlay();initAppForUser(saved);}
+  if(saved&&sessionIsFresh()){AW_SESSION=saved;_sdkSetSession(saved.secret);hideAuthOverlay();initAppForUser(saved);}
   else {
     awFetch('GET','/account',null)
       .then(account=>{const merged={...(saved||{}),userId:account.$id,name:account.name,email:account.email,labels:account.labels||[]};saveSession(merged);hideAuthOverlay();initAppForUser(AW_SESSION);})
