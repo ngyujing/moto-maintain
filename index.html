@@ -653,7 +653,6 @@ async function awFetch(method, path, body) {
   const headers = {
     'Content-Type':       'application/json',
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
-    'X-Appwrite-Response-Format': '1.5.0',
   };
   // Prefer JWT (most reliable on Safari/iOS — header, not cookie)
   if (AW_SESSION && AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now() < AW_SESSION.jwtExpiry) {
@@ -696,8 +695,7 @@ async function acquireJwt() {
     const headers = {
       'Content-Type':       'application/json',
       'X-Appwrite-Project': APPWRITE_PROJECT_ID,
-      'X-Appwrite-Response-Format': '1.5.0',
-    };
+      };
     if (AW_SESSION.secret && AW_SESSION.secret.length > 0) {
       headers['X-Appwrite-Session'] = AW_SESSION.secret;
     }
@@ -770,7 +768,7 @@ async function doLogin() {
     try {
       await fetch(APPWRITE_ENDPOINT + '/account/sessions/current', {
         method:'DELETE',
-        headers:{'X-Appwrite-Project':APPWRITE_PROJECT_ID,'X-Appwrite-Response-Format':'1.5.0'},
+        headers:{'X-Appwrite-Project':APPWRITE_PROJECT_ID},
         credentials:'include',
       });
     } catch {}
@@ -786,13 +784,8 @@ async function doLogin() {
     };
     console.log('[Auth] login: secret length =', AW_SESSION.secret.length);
 
-    // Get JWT NOW — cookie is freshest from login response
-    const gotJwt = await acquireJwt();
-    if (!gotJwt && !AW_SESSION.secret) {
-      // No JWT and no secret = nothing will work for data. Show clear error.
-      showAuthError('Auth failed after login. Your browser may be blocking third-party cookies. Try a different browser.');
-      clearSession(); return;
-    }
+    // Try to acquire JWT (best auth for mobile). May fail silently if cookie blocked.
+    await acquireJwt();
 
     // Get account profile (will work now that we have auth)
     try {
@@ -835,7 +828,7 @@ async function doRegister() {
     try {
       await fetch(APPWRITE_ENDPOINT + '/account/sessions/current', {
         method:'DELETE',
-        headers:{'X-Appwrite-Project':APPWRITE_PROJECT_ID,'X-Appwrite-Response-Format':'1.5.0'},
+        headers:{'X-Appwrite-Project':APPWRITE_PROJECT_ID},
         credentials:'include',
       });
     } catch {}
