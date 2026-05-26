@@ -312,7 +312,8 @@ select.form-input option{background:var(--s3)}
 <div id="page-dashboard" class="page active">
   <div class="page-header">
     <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div></div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="debug-btn" class="btn btn-secondary btn-sm" onclick="showDebugInfo()" title="Show diagnostic info">🐞 Debug</button>
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
       <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
     </div>
@@ -761,6 +762,8 @@ function loadSession() {
 // Verify session is still valid with server. Returns true if it is.
 async function verifySession() {
   if (!AW_SESSION) return false;
+  console.log('[Auth] verifySession start: hasSecret=' + !!(AW_SESSION.secret?.length) +
+              ', hasJwt=' + !!(AW_SESSION.jwt && AW_SESSION.jwtExpiry > Date.now()));
   try {
     const acct = await awFetch('GET','/account',null);
     AW_SESSION.userId = acct.$id;
@@ -772,6 +775,25 @@ async function verifySession() {
     return true;
   } catch(e) {
     console.warn('[Auth] verifySession failed:', e.code, e.message);
+    // If we have a secret but it's rejected, the secret is invalid.
+    // Try to acquire a JWT as fallback (rare, but possible if cookie still works).
+    if (e.code === 401 && AW_SESSION.secret) {
+      console.log('[Auth] Secret rejected. Trying JWT fallback...');
+      AW_SESSION.secret = ''; // invalid secret — force JWT path
+      const got = await acquireJwt();
+      if (got) {
+        try {
+          const acct = await awFetch('GET','/account',null);
+          AW_SESSION.userId = acct.$id;
+          AW_SESSION.name = acct.name || AW_SESSION.name;
+          AW_SESSION.email = acct.email || AW_SESSION.email;
+          AW_SESSION.labels = acct.labels || [];
+          persistSession();
+          console.log('[Auth] verifySession OK via JWT fallback');
+          return true;
+        } catch(e2) { console.warn('[Auth] JWT fallback also failed:', e2.code); }
+      }
+    }
     return false;
   }
 }
@@ -2022,6 +2044,59 @@ async function deleteBike(bikeId) {
   APP.history=APP.history.filter(h=>h.bikeId!==bikeId);
   renderAll(); showToast('🗑 Motorcycle deleted');
 }
+
+// ─── DEBUG ────────────────────────────────────────────────────────
+window.showDebugInfo = async function() {
+  let lsRaw = '';
+  try { lsRaw = localStorage.getItem('mm_session') || '(none)'; } catch(e) { lsRaw = 'ERROR: ' + e.message; }
+
+  const lines = [
+    '=== AUTH STATE ===',
+    'AW_SESSION exists: ' + !!AW_SESSION,
+    'userId: ' + (AW_SESSION?.userId || '(none)'),
+    'secret length: ' + (AW_SESSION?.secret?.length || 0),
+    'has JWT: ' + !!(AW_SESSION?.jwt),
+    'jwt expires in: ' + (AW_SESSION?.jwtExpiry ? Math.round((AW_SESSION.jwtExpiry - Date.now())/1000/60) + ' min' : 'n/a'),
+    '',
+    '=== APP DATA ===',
+    'bikes in memory: ' + APP.bikes.length,
+    'items in memory: ' + APP.items.length,
+    'history in memory: ' + APP.history.length,
+    '',
+    '=== STORED SESSION ===',
+    'localStorage size: ' + lsRaw.length + ' chars',
+    '',
+    '=== ENV ===',
+    'URL: ' + window.location.href,
+    'Online check: ' + isOnline(),
+    'User Agent: ' + navigator.userAgent.substring(0, 80) + '...',
+  ];
+
+  // Try a live test fetch to see what error we get
+  lines.push('', '=== LIVE TEST FETCH ===');
+  if (AW_SESSION?.userId) {
+    try {
+      const r = await awFetch('GET','/account',null);
+      lines.push('GET /account: ✅ OK (userId=' + r.$id + ')');
+    } catch(e) {
+      lines.push('GET /account: ❌ [' + e.code + '] ' + e.message);
+    }
+    try {
+      const qs = 'queries[]=' + encodeURIComponent(Appwrite.Query.equal('userId', AW_SESSION.userId)) +
+                 '&queries[]=' + encodeURIComponent(Appwrite.Query.limit(100));
+      const r = await awFetch('GET', '/databases/' + APPWRITE_DATABASE + '/collections/motorcycles/documents?' + qs);
+      lines.push('GET motorcycles: ✅ OK (' + (r.documents?.length || 0) + ' docs)');
+    } catch(e) {
+      lines.push('GET motorcycles: ❌ [' + e.code + '] ' + e.message);
+    }
+  } else {
+    lines.push('(skipped - no userId)');
+  }
+
+  const msg = lines.join('\n');
+  console.log(msg);
+  alert(msg);
+};
 
 // ─── INIT ─────────────────────────────────────────────────────────
 (function init(){
