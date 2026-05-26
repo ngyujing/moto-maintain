@@ -820,6 +820,7 @@ async function doRegister() {
     _sdkSetSession(regSession.secret);
     AW_SESSION = {secret:regSession.secret||'', userId:regSession.userId||'', name, email, labels:[]};
     saveSession(AW_SESSION);
+    await acquireJwt();
     clearAuthError(); hideAuthOverlay(); await initAppForUser(AW_SESSION); return;
   } catch(err) {
     if (err.type==='user_already_exists') showAuthError('An account with this email already exists. Sign in instead.');
@@ -935,7 +936,7 @@ async function syncFromCloud() {
           return;
         } catch(e2) { msg = e2.message || msg; }
       }
-      msg = 'Auth error — try signing out and back in. [' + err.code + ']';
+      msg = 'Auth error [' + err.code + '] — sign out and back in.';
     }
     showToast('❌ Sync failed: ' + msg);
     console.error('syncFromCloud error:', err);
