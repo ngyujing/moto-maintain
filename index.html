@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MotoMaintain v20260526-071137</title>
+<title>MotoMaintain v20260526-072930</title>
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2/dist/iife/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -314,7 +314,7 @@ select.form-input option{background:var(--s3)}
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-071137</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-072930</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="debug-btn" class="btn btn-secondary btn-sm" onclick="showDebugInfo()" title="Show diagnostic info">🐞 Debug</button>
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
@@ -648,29 +648,23 @@ function progress(item, currentKm) {
 // One function for ALL Appwrite API calls. Sends exactly ONE auth method.
 // Appwrite v1.6+ rejects requests with both JWT+cookie or session+cookie.
 async function awFetch(method, path, body) {
-  // Auto-refresh JWT if expiring within 2 min (skip on auth-creating paths)
-  const isAuthPath = path.includes('/account/jwt') || path.includes('/account/sessions') || path === '/account';
-  if (!isAuthPath && AW_SESSION && AW_SESSION.jwtExpiry &&
-      Date.now() > AW_SESSION.jwtExpiry - 2 * 60 * 1000) {
-    try { await acquireJwt(); } catch {}
-  }
-
+  // No JWT auto-refresh needed — X-Fallback-Cookies handles auth across all browsers
   const headers = {
     'Content-Type':       'application/json',
     'X-Appwrite-Project': APPWRITE_PROJECT_ID,
   };
 
-  // EXACTLY ONE auth method. Order: session secret (most reliable) > JWT > cookie.
-  let useCookies = true;
-  if (AW_SESSION && typeof AW_SESSION.secret === 'string' && AW_SESSION.secret.length > 0) {
-    headers['X-Appwrite-Session'] = AW_SESSION.secret;
-    useCookies = false;
-  } else if (AW_SESSION && AW_SESSION.jwt && AW_SESSION.jwtExpiry && Date.now() < AW_SESSION.jwtExpiry) {
-    headers['X-Appwrite-JWT'] = AW_SESSION.jwt;
-    useCookies = false;
-  }
+  // ── Appwrite's official cookie-fallback mechanism for Safari ITP ──
+  // If the browser blocks the auth cookie, Appwrite returns its value as a header.
+  // We store it and replay it on every request, mimicking a cookie.
+  try {
+    const fb = localStorage.getItem('cookieFallback');
+    if (fb && fb !== '[]') headers['X-Fallback-Cookies'] = fb;
+  } catch {}
 
-  const opts = { method, headers, credentials: useCookies ? 'include' : 'omit' };
+  // credentials:'include' so the cookie ALSO works where it can.
+  // The server is fine with both being present — uses whichever auth works.
+  const opts = { method, headers, credentials: 'include' };
   if (body !== null && body !== undefined) opts.body = JSON.stringify(body);
 
   let res;
@@ -685,6 +679,23 @@ async function awFetch(method, path, body) {
     friendly.code = 0;
     throw friendly;
   }
+
+  // ── Capture fallback cookies from response ──
+  // Appwrite always sends this header on Set-Cookie responses for clients
+  // that need it. We store whatever it sends.
+  try {
+    const respFb = res.headers.get('X-Fallback-Cookies');
+    if (respFb !== null) {
+      if (respFb === '' || respFb === '[]') {
+        localStorage.removeItem('cookieFallback');
+        console.log('[Auth] X-Fallback-Cookies cleared by server');
+      } else {
+        localStorage.setItem('cookieFallback', respFb);
+        console.log('[Auth] X-Fallback-Cookies stored (length:', respFb.length, ')');
+      }
+    }
+  } catch {}
+
   const json = await res.json().catch(()=>({}));
   if (!res.ok) {
     const err = new Error(json.message || 'Request failed');
@@ -737,7 +748,7 @@ function getOriginWarning() {
   if (window.location.protocol==='file:') return 'Open via a web server, not file://';
   return null;
 }
-function clearSession() { try{localStorage.removeItem('mm_session');}catch{} AW_SESSION = null; }
+function clearSession() { try{localStorage.removeItem('mm_session');localStorage.removeItem('cookieFallback');}catch{} AW_SESSION = null; console.log('[Auth] Session cleared'); }
 function sessionIsFresh() {
   try {
     const raw = localStorage.getItem('mm_session');
@@ -803,26 +814,10 @@ async function verifySession() {
 
 // ─── AUTH FUNCTIONS ───────────────────────────────────────────────
 
-// Create a session and force Appwrite to include the secret in the response.
-// The 1.4.0 response format includes session.secret; newer formats strip it.
+// Create email/password session. awFetch automatically captures X-Fallback-Cookies
+// from the response, which is what authenticates subsequent requests on Safari.
 async function _createSessionWithSecret(email, password) {
-  const res = await fetch(APPWRITE_ENDPOINT + '/account/sessions/email', {
-    method: 'POST',
-    headers: {
-      'Content-Type':       'application/json',
-      'X-Appwrite-Project': APPWRITE_PROJECT_ID,
-      'X-Appwrite-Response-Format': '1.4.0',
-    },
-    credentials: 'include',
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json().catch(()=>({}));
-  if (!res.ok) {
-    const err = new Error(data.message || 'Login failed');
-    err.code = res.status; err.type = data.type || '';
-    throw err;
-  }
-  return data;
+  return await awFetch('POST', '/account/sessions/email', { email, password });
 }
 
 async function doLogin() {
@@ -856,16 +851,8 @@ async function doLogin() {
     };
     console.log('[Auth] login: userId =', AW_SESSION.userId, '| secret len =', AW_SESSION.secret.length);
 
-    // If no secret was returned, fall back to JWT (cookie must work for this)
-    if (!AW_SESSION.secret) {
-      const ok = await acquireJwt();
-      if (!ok) {
-        showAuthError('Login succeeded but auth headers unavailable. This browser may be blocking required features.');
-        clearSession(); return;
-      }
-    }
-
-    // Verify session works end-to-end before declaring victory
+    // Verify session works end-to-end. cookieFallback should be set by awFetch
+    // from the login response automatically.
     const verified = await verifySession();
     if (!verified) {
       showAuthError('Login succeeded but session verification failed. Please try again.');
@@ -936,6 +923,7 @@ async function doRegister() {
 async function doLogout() {
   if (isOnline()&&AW_SESSION) { try{await awFetch('DELETE','/account/sessions/current',null);}catch{} }
   document.cookie='a_session_'+APPWRITE_PROJECT_ID+'=; Max-Age=0; path=/; SameSite=None; Secure';
+  try { localStorage.removeItem('cookieFallback'); } catch {}
   clearSession();
   APP.bikes=[]; APP.items=[]; APP.history=[]; APP.nextId=1; APP.profile={name:'Rider',email:''};
   clearState(); currentTheme='dark'; currentCurrency='SGD';
@@ -2068,6 +2056,7 @@ window.showDebugInfo = async function() {
     '',
     '=== STORED SESSION ===',
     'localStorage size: ' + lsRaw.length + ' chars',
+    'cookieFallback: ' + (function(){try{const v=localStorage.getItem('cookieFallback');return v?'present ('+v.length+' chars)':'(none)';}catch{return 'ERR';}})(),
     '',
     '=== ENV ===',
     'URL: ' + window.location.href,
@@ -2111,19 +2100,23 @@ window.showDebugInfo = async function() {
   if(!isOnline()){const saved=loadSession();if(saved){hideAuthOverlay();initAppForUser(saved);}else showAuthOverlay();return;}
 
   const saved=loadSession();
-  if(saved&&sessionIsFresh()){
-    AW_SESSION=saved;
-    console.log('[Init] Found saved session for userId =', saved.userId);
-    // Verify with server before showing app — catches stale sessions across devices
+  if(saved){
+    AW_SESSION = saved;
+    console.log('[Init] Found saved session for userId =', saved.userId, '| hasSecret =', !!(saved.secret && saved.secret.length>0));
+    // Verify with server regardless of freshness — a stale-by-time session may still be valid
     verifySession().then(ok => {
-      if (ok) { hideAuthOverlay(); initAppForUser(AW_SESSION); }
-      else { clearSession(); showAuthOverlay(); }
+      if (ok) {
+        console.log('[Init] Session verified, showing app');
+        hideAuthOverlay(); initAppForUser(AW_SESSION);
+      } else {
+        console.warn('[Init] Saved session rejected by server. Clearing and showing login.');
+        clearSession();
+        showAuthOverlay();
+      }
     });
-  }
-  else {
-    awFetch('GET','/account',null)
-      .then(account=>{AW_SESSION={...(saved||{}),userId:account.$id,name:account.name,email:account.email,labels:account.labels||[]};persistSession();hideAuthOverlay();initAppForUser(AW_SESSION);})
-      .catch(()=>{clearSession();showAuthOverlay();});
+  } else {
+    console.log('[Init] No saved session — showing login overlay');
+    showAuthOverlay();
   }
   const warn=getOriginWarning();
   if(warn){const warnEl=document.getElementById('auth-origin-warn');if(warnEl){warnEl.textContent='⚠️ '+warn;warnEl.style.display='';}}
