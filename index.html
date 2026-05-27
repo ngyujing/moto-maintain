@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Ccircle cx='16' cy='13' r='6' fill='none' stroke='%23f97316' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='13' r='2.5' fill='%230b0e14'/%3E%3Cline x1='16' y1='7' x2='16' y2='10.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='21.2' y1='10' x2='18.6' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='10.8' y1='10' x2='13.4' y2='11.5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3Crect x='13.8' y='18' width='4.4' height='9' rx='2.2' fill='%23f97316'/%3E%3Ccircle cx='26' cy='28' r='2' fill='%23f97316'/%3E%3C/svg%3E"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MotoMaintain v20260526-144027</title>
+<title>MotoMaintain v20260527-063105</title>
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2/dist/iife/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -314,7 +314,7 @@ select.form-input option{background:var(--s3)}
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260526-144027</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260527-063105</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
       <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
@@ -359,6 +359,10 @@ select.form-input option{background:var(--s3)}
   <div id="dash-soon-hdr">
     <div class="section-hd" style="color:var(--amber)">🕐 Due Soon</div>
     <div class="card" id="dash-soon-list"></div>
+  </div>
+  <div id="dash-ownership-hdr" style="display:none;margin-top:20px">
+    <div class="section-hd" style="color:var(--amber)">📋 Documents Expiring Soon</div>
+    <div class="card" id="dash-ownership-list"></div>
   </div>
 </div>
 
@@ -469,6 +473,19 @@ select.form-input option{background:var(--s3)}
         <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
         <button class="btn btn-danger" onclick="doLogout()">Sign Out</button>
       </div>
+  </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-title">🇸🇬 Ownership Reminders</div>
+    <div class="settings-desc">How far in advance to warn you about expiring documents (Road Tax, Insurance, Inspection).</div>
+    <div class="settings-row card">
+      <div><div class="settings-row-label">Reminder lead time</div><div class="settings-row-sub">Default is 30 days. COE always warns 180 days early.</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input id="ownership-reminder-days" type="number" min="7" max="180" value="30" class="form-input" style="width:70px;padding:6px 10px;font-size:13px;text-align:center"/>
+        <span style="font-size:13px;color:var(--text2)">days</span>
+        <button class="btn btn-secondary btn-sm" onclick="saveOwnershipReminderDays()">Save</button>
+      </div>
+    </div>
     </div>
   </div>
   <div class="settings-section" id="admin-debug-section" style="display:none">
@@ -533,6 +550,16 @@ select.form-input option{background:var(--s3)}
         <div class="form-group"><label class="form-label">Nickname</label><input id="bike-nick" type="text" class="form-input" placeholder="My daily rider"/></div>
         <div class="form-group"><label class="form-label">Color</label><input id="bike-color" type="text" class="form-input" placeholder="Candy Red"/></div>
         <div class="form-group full"><label class="form-label">VIN (optional)</label><input id="bike-vin" type="text" class="form-input" placeholder="JKAZX4R13MA000001"/></div>
+        <div class="form-group full" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+          <div style="font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">🇸🇬 Singapore Ownership Details (optional)</div>
+        </div>
+        <div class="form-group"><label class="form-label">Registration Date</label><input id="bike-reg-date" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Road Tax Expiry</label><input id="bike-roadtax" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Insurance Expiry</label><input id="bike-insurance-exp" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Insurer Name</label><input id="bike-insurer" type="text" class="form-input" placeholder="e.g. NTUC Income"/></div>
+        <div class="form-group"><label class="form-label">Policy Number</label><input id="bike-policy" type="text" class="form-input" placeholder="e.g. AB-1234567"/></div>
+        <div class="form-group"><label class="form-label">COE Expiry</label><input id="bike-coe" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Last Inspection Date</label><input id="bike-insp" type="date" class="form-input"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn btn-secondary" style="flex:1" onclick="addBikeStep1()">← Back</button>
@@ -578,6 +605,27 @@ select.form-input option{background:var(--s3)}
 </div>
 
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<div class="modal-overlay" id="modal-ownership">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><div class="modal-title">📋 Edit Ownership Details</div><div class="modal-close" onclick="closeModal('ownership')">✕</div></div>
+    <div id="ownership-bike-name" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Registration Date</label><input id="ow-reg-date" type="date" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Road Tax Expiry</label><input id="ow-roadtax" type="date" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Insurance Expiry</label><input id="ow-ins-exp" type="date" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Insurer Name</label><input id="ow-insurer" type="text" class="form-input" placeholder="e.g. NTUC Income"/></div>
+      <div class="form-group"><label class="form-label">Policy Number</label><input id="ow-policy" type="text" class="form-input" placeholder="e.g. AB-1234567"/></div>
+      <div class="form-group"><label class="form-label">COE Expiry</label><input id="ow-coe" type="date" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Last Inspection Date</label><input id="ow-insp" type="date" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Next Inspection Date <span style="color:var(--text3);font-weight:400;text-transform:none;font-size:9px">(auto-calculated)</span></label><input id="ow-next-insp" type="date" class="form-input" readonly style="opacity:.6"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('ownership')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveOwnershipDetails()">✓ Save</button>
+    </div>
+  </div>
+</div>
 <script>
 // ═══════════════════════════════════════════════════════════════════
 //  APPWRITE CONFIG
@@ -613,6 +661,35 @@ function serviceTypeBadge(code) {
 
 // ─── HELPER FUNCTIONS ─────────────────────────────────────────────
 function getCurrency() { return CURRENCY_SYMBOLS[currentCurrency] || currentCurrency; }
+
+// ── Ownership / Document helpers ─────────────────────────────────
+function calcNextInspection(registrationDate, lastInspectionDate) {
+  const regDate = registrationDate ? new Date(registrationDate) : null;
+  if (!regDate || !lastInspectionDate) return null;
+  const ageYears = (Date.now() - regDate.getTime()) / (365.25 * 86400000);
+  const intervalDays = ageYears > 10 ? 182 : 365;
+  const last = new Date(lastInspectionDate);
+  last.setDate(last.getDate() + intervalDays);
+  return last.toISOString().split('T')[0];
+}
+function docStatus(expiryDateStr, reminderDays) {
+  if (!expiryDateStr) return 'unknown';
+  const days = Math.ceil((new Date(expiryDateStr) - Date.now()) / 86400000);
+  if (days < 0)             return 'expired';
+  if (days <= reminderDays) return 'due_soon';
+  return 'valid';
+}
+function docStatusBadge(expiryDateStr, label, reminderDays) {
+  const st = docStatus(expiryDateStr, reminderDays);
+  const days = expiryDateStr ? Math.ceil((new Date(expiryDateStr) - Date.now()) / 86400000) : null;
+  const cfg = {
+    expired:  {bg:'var(--red-bg)',   border:'var(--red-border)',   color:'var(--red)',   icon:'🔴',text:'Expired'},
+    due_soon: {bg:'var(--amber-bg)', border:'var(--amber-border)', color:'var(--amber)', icon:'🟡',text:days+'d left'},
+    valid:    {bg:'var(--green-bg)', border:'var(--green-border)', color:'var(--green)', icon:'🟢',text:days+'d left'},
+    unknown:  {bg:'var(--slate-bg)', border:'var(--slate-border)', color:'var(--slate)', icon:'⚫',text:'Not set'},
+  }[st];
+  return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;background:${cfg.bg};border:1px solid ${cfg.border};margin-bottom:8px"><div><div style="font-size:13px;font-weight:600;color:var(--text)">${cfg.icon} ${label}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${expiryDateStr?fmtDate(expiryDateStr):'Not entered'}</div></div><span style="font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;color:${cfg.color};background:${cfg.bg};border:1px solid ${cfg.border};padding:3px 8px;border-radius:999px">${cfg.text}</span></div>`;
+}
 
 function fmtKm(km) {
   if (km === null || km === undefined || km === '') return '—';
@@ -1006,6 +1083,10 @@ async function _fetchCloudData(userId) {
     id:d.$id, make:d.make, model:d.model, year:d.year, km:d.currentKm,
     nickname:d.nickname||'', color:d.color||'', vin:d.vin||'',
     bikeType:d.bikeType||'naked', addedAt:d.$createdAt,
+    registrationDate:d.registrationDate||'', inspectionDate:d.inspectionDate||'',
+    nextInspectionDate:d.nextInspectionDate||'', roadTaxExpiry:d.roadTaxExpiry||'',
+    insuranceExpiry:d.insuranceExpiry||'', insuranceProvider:d.insuranceProvider||'',
+    insurancePolicyNo:d.insurancePolicyNo||'', coeExpiry:d.coeExpiry||'',
   }));
   APP.items = (itemsRes.documents||[]).map(d=>({
     id:d.$id, bikeId:d.motorcycleId, partType:d.partType, partLabel:d.partLabel,
@@ -1348,6 +1429,16 @@ function saveSetting(key, value) {
   showToast('✓ Setting saved');
 }
 
+function saveOwnershipReminderDays() {
+  const el = document.getElementById('ownership-reminder-days');
+  const val = parseInt(el?.value) || 30;
+  if (val < 7 || val > 180) { showToast('⚠️ Enter a value between 7 and 180 days'); return; }
+  APP_SETTINGS.ownershipReminderDays = val;
+  saveState();
+  renderDashboard(); // refresh reminders with new threshold
+  showToast('✓ Reminder lead time set to ' + val + ' days');
+}
+
 function applySettings() {
   // Overdue alerts toggle
   const ot = document.getElementById('toggle-overdue');
@@ -1358,6 +1449,9 @@ function applySettings() {
   // Threshold select
   const ts = document.getElementById('threshold-select');
   if (ts) ts.value = String(APP_SETTINGS.dueSoonThreshold || 500);
+  // Ownership reminder days
+  const or2 = document.getElementById('ownership-reminder-days');
+  if (or2) or2.value = String(APP_SETTINGS.ownershipReminderDays || 30);
   // Apply badge visibility
   const sb = document.getElementById('sidebar-badge');
   const bb = document.getElementById('bnav-badge');
@@ -1461,7 +1555,13 @@ async function submitAddBike() {
   if (!year)  { showToast('⚠️ Enter the year');       return; }
   if (km==='') { showToast('⚠️ Enter current odometer (0 if new)'); return; }
 
-  const bike={id:uid(),make,model,year:parseInt(year),km:parseInt(km)||0,nickname:nick||'',color:color||'',bikeType:selectedBikeType,addedAt:new Date().toISOString()};
+  const g2=(id)=>document.getElementById(id)?.value?.trim()??'';
+  const regDate=g2('bike-reg-date'),lastInsp=g2('bike-insp');
+  const nextInsp=lastInsp?calcNextInspection(regDate||(parseInt(year)+'-01-01'),lastInsp):'';
+  const bike={id:uid(),make,model,year:parseInt(year),km:parseInt(km)||0,nickname:nick||'',color:color||'',bikeType:selectedBikeType,addedAt:new Date().toISOString(),
+    registrationDate:regDate,inspectionDate:lastInsp,nextInspectionDate:nextInsp,
+    roadTaxExpiry:g2('bike-roadtax'),insuranceExpiry:g2('bike-insurance-exp'),
+    insuranceProvider:g2('bike-insurer'),insurancePolicyNo:g2('bike-policy'),coeExpiry:g2('bike-coe')};
   const enabledPending=_pendingItems.filter(pi=>pi.enabled&&pi.label.trim());
   const newItems=enabledPending.length>0 ? buildItemsFromPending(bike,enabledPending) : estimateItemsForBike(bike,selectedBikeType);
 
@@ -1469,7 +1569,10 @@ async function submitAddBike() {
     const btn=document.querySelector('#add-step-3 .btn-primary');
     if (btn){btn.textContent='Saving…';btn.style.pointerEvents='none';}
     try {
-      await awCreate('motorcycles',{userId:AW_SESSION.userId,make:bike.make,model:bike.model,year:bike.year,currentKm:bike.km,nickname:bike.nickname||'',color:bike.color||'',vin:'',bikeType:bike.bikeType||'naked'},bike.id);
+      await awCreate('motorcycles',{userId:AW_SESSION.userId,make:bike.make,model:bike.model,year:bike.year,currentKm:bike.km,nickname:bike.nickname||'',color:bike.color||'',vin:'',bikeType:bike.bikeType||'naked',
+        registrationDate:bike.registrationDate||null,inspectionDate:bike.inspectionDate||null,nextInspectionDate:bike.nextInspectionDate||null,
+        roadTaxExpiry:bike.roadTaxExpiry||null,insuranceExpiry:bike.insuranceExpiry||null,
+        insuranceProvider:bike.insuranceProvider||null,insurancePolicyNo:bike.insurancePolicyNo||null,coeExpiry:bike.coeExpiry||null},bike.id);
       await Promise.all(newItems.map(item=>awCreate('maintenance_items',{
         motorcycleId:item.bikeId, userId:AW_SESSION.userId,
         partType:item.partType||'custom', partLabel:item.partLabel,
@@ -1621,6 +1724,86 @@ async function doUpdateOdometer() {
 }
 
 // ─── BIKE DETAIL ──────────────────────────────────────────────────
+// ── Ownership edit functions ─────────────────────────────────────
+let _ownershipBikeId = null;
+
+function openOwnershipEdit(bikeId) {
+  _ownershipBikeId = bikeId;
+  const bike = APP.bikes.find(b => b.id === bikeId);
+  if (!bike) return;
+  document.getElementById('ownership-bike-name').textContent = bike.make + ' ' + bike.model + ' ' + bike.year;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setVal('ow-reg-date', bike.registrationDate);
+  setVal('ow-roadtax',  bike.roadTaxExpiry);
+  setVal('ow-ins-exp',  bike.insuranceExpiry);
+  setVal('ow-insurer',  bike.insuranceProvider);
+  setVal('ow-policy',   bike.insurancePolicyNo);
+  setVal('ow-coe',      bike.coeExpiry);
+  setVal('ow-insp',     bike.inspectionDate);
+  setVal('ow-next-insp',bike.nextInspectionDate);
+  // Wire last inspection change to auto-calc next
+  document.getElementById('ow-insp').onchange = function() {
+    const regDate = document.getElementById('ow-reg-date').value || (bike.year + '-01-01');
+    const next = calcNextInspection(regDate, this.value);
+    document.getElementById('ow-next-insp').value = next || '';
+  };
+  openModal('ownership');
+}
+
+async function saveOwnershipDetails() {
+  const bike = APP.bikes.find(b => b.id === _ownershipBikeId);
+  if (!bike) return;
+  const getVal = id => document.getElementById(id)?.value?.trim() || '';
+  const regDate  = getVal('ow-reg-date');
+  const lastInsp = getVal('ow-insp');
+  const nextInsp = getVal('ow-next-insp') || (lastInsp ? calcNextInspection(regDate || bike.year + '-01-01', lastInsp) : '');
+  const updates = {
+    registrationDate:  regDate,
+    inspectionDate:    lastInsp,
+    nextInspectionDate: nextInsp,
+    roadTaxExpiry:     getVal('ow-roadtax'),
+    insuranceExpiry:   getVal('ow-ins-exp'),
+    insuranceProvider: getVal('ow-insurer'),
+    insurancePolicyNo: getVal('ow-policy'),
+    coeExpiry:         getVal('ow-coe'),
+  };
+  // Save to Appwrite
+  if (isOnline() && AW_SESSION) {
+    const btn = document.querySelector('#modal-ownership .btn-primary');
+    if (btn) { btn.textContent = 'Saving…'; btn.style.pointerEvents = 'none'; }
+    try {
+      await awUpdate('motorcycles', bike.id, {
+        registrationDate:  updates.registrationDate  || null,
+        inspectionDate:    updates.inspectionDate    || null,
+        nextInspectionDate:updates.nextInspectionDate|| null,
+        roadTaxExpiry:     updates.roadTaxExpiry     || null,
+        insuranceExpiry:   updates.insuranceExpiry   || null,
+        insuranceProvider: updates.insuranceProvider || null,
+        insurancePolicyNo: updates.insurancePolicyNo || null,
+        coeExpiry:         updates.coeExpiry         || null,
+      });
+    } catch(err) {
+      if (btn) { btn.textContent = '✓ Save'; btn.style.pointerEvents = ''; }
+      showToast('❌ Could not save: ' + (err.message || 'error'));
+      return;
+    }
+  }
+  // Update local state
+  Object.assign(bike, updates);
+  saveState();
+  closeModal('ownership');
+  renderBikeDetail(bike.id); // refresh the detail view
+  showToast('✓ Ownership details saved!');
+}
+
+function bikeDetailTab(tab, el) {
+  ['info','ownership','service'].forEach(t => {
+    const el2 = document.getElementById('bdt-'+t);
+    if (el2) el2.style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('#page-motodetail .tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
 function openBikeDetail(bikeId) { renderBikeDetail(bikeId); nav('motodetail',null); setActiveNav('bikes'); }
 
 function renderBikeDetail(bikeId) {
@@ -1646,6 +1829,12 @@ function renderBikeDetail(bikeId) {
         <button class="btn btn-primary btn-sm" onclick="nav('maintenance',null);setActiveNav('maintenance');renderMaintenance('${bike.id}')">🔧 Maintenance</button>
       </div>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="tab active" onclick="bikeDetailTab('info',this)">🏍️ Info</button>
+      <button class="tab" onclick="bikeDetailTab('ownership',this)">📋 Ownership</button>
+      <button class="tab" onclick="bikeDetailTab('service',this)">🔧 Service</button>
+    </div>
+    <div id="bdt-info">
     <div class="detail-split">
       <div>
         <div class="card" style="padding:20px;margin-bottom:16px">
@@ -1688,6 +1877,34 @@ function renderBikeDetail(bikeId) {
                 </div>
               </div>`).join('')}</div>`}
         </div>
+      </div>
+    </div>
+    </div>
+
+    <div id="bdt-ownership" style="display:none">
+      <div class="card" style="padding:20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="section-hd" style="margin:0">🇸🇬 Ownership Documents</div>
+          <button class="btn btn-secondary btn-sm" onclick="openOwnershipEdit('${bike.id}')">✏️ Edit</button>
+        </div>
+        ${docStatusBadge(bike.roadTaxExpiry,'🟢 Road Tax', APP_SETTINGS.ownershipReminderDays)}
+        ${docStatusBadge(bike.insuranceExpiry,'🛡️ Insurance', APP_SETTINGS.ownershipReminderDays)}
+        ${docStatusBadge(bike.nextInspectionDate,'🔍 Next Inspection', APP_SETTINGS.ownershipReminderDays)}
+        ${docStatusBadge(bike.coeExpiry,'📄 COE', 180)}
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${bike.registrationDate?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Registered</div><div style="font-size:13px;font-weight:500;color:var(--text)">${fmtDate(bike.registrationDate)}</div></div>`:''}
+          ${bike.inspectionDate?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Last Inspection</div><div style="font-size:13px;font-weight:500;color:var(--text)">${fmtDate(bike.inspectionDate)}</div></div>`:''}
+          ${bike.insuranceProvider?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Insurer</div><div style="font-size:13px;font-weight:500;color:var(--text)">${bike.insuranceProvider}</div></div>`:''}
+          ${bike.insurancePolicyNo?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Policy No.</div><div style="font-size:13px;font-weight:500;color:var(--text);font-family:'JetBrains Mono',monospace">${bike.insurancePolicyNo}</div></div>`:''}
+        </div>
+      </div>
+    </div>
+
+    <div id="bdt-service" style="display:none">
+      <div style="text-align:center;padding:32px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:8px">🔧</div>
+        <p style="margin-bottom:12px">View all service items for this bike</p>
+        <button class="btn btn-primary" onclick="nav('maintenance',null);setActiveNav('maintenance');renderMaintenance('${bike.id}')">Open Maintenance Page</button>
       </div>
     </div>`;
 }
@@ -1793,6 +2010,39 @@ function renderDashboard() {
   if(soHdr) soHdr.style.display=soon.length?'':'none';
   const soList=document.getElementById('dash-soon-list');
   if(soList) soList.innerHTML=soon.map(item=>{const bike=APP.bikes.find(b=>b.id===item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}</div><div class="svc-meta">${bike?bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div></div>`;}).join('');
+
+  // ── Ownership document reminders on dashboard ────────────────────────────
+  const owDocs = [];
+  const rd = APP_SETTINGS.ownershipReminderDays || 30;
+  APP.bikes.forEach(bike => {
+    const checks = [
+      { label:'Road Tax',       date:bike.roadTaxExpiry,        days:rd  },
+      { label:'Insurance',      date:bike.insuranceExpiry,      days:rd  },
+      { label:'Inspection Due', date:bike.nextInspectionDate,   days:rd  },
+      { label:'COE',            date:bike.coeExpiry,            days:180 },
+    ];
+    checks.forEach(c => {
+      if (!c.date) return;
+      const daysLeft = Math.ceil((new Date(c.date) - Date.now()) / 86400000);
+      if (daysLeft <= c.days) {
+        owDocs.push({ bike, label:c.label, date:c.date, daysLeft });
+      }
+    });
+  });
+  const owHdr = document.getElementById('dash-ownership-hdr');
+  const owList = document.getElementById('dash-ownership-list');
+  if (owHdr) owHdr.style.display = owDocs.length ? '' : 'none';
+  if (owList) owList.innerHTML = owDocs.map(d => {
+    const expired = d.daysLeft < 0;
+    const color = expired ? 'var(--red)' : d.daysLeft <= 7 ? 'var(--red)' : 'var(--amber)';
+    const txt = expired ? 'EXPIRED' : d.daysLeft + ' days left';
+    return `<div class="service-row" onclick="openBikeDetail('${d.bike.id}');setTimeout(()=>bikeDetailTab('ownership',null),100)">
+      <span class="svc-icon">📋</span>
+      <div style="flex:1"><div class="svc-name">${d.label}</div>
+      <div class="svc-meta">${d.bike.make} ${d.bike.model} · Due ${fmtDate(d.date)}</div></div>
+      <span style="font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;color:${color};background:${color}22;border:1px solid ${color}44;padding:3px 8px;border-radius:999px">${txt}</span>
+    </div>`;
+  }).join('');
 }
 
 // ─── RENDER MAINTENANCE ───────────────────────────────────────────
