@@ -2846,5 +2846,21 @@ window.showDebugInfo = async function() {
     <div class="bnav-item" id="bnav-overview" onclick="nav('overview',null);setActiveNav('overview')"><span class="bnav-icon">🔭</span><span class="bnav-label">Overview</span></div>
   </div>
 </nav>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const sw = reg.installing;
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'activated' && navigator.serviceWorker.controller) {
+          window.location.reload();
+        }
+      });
+    });
+  });
+  // Reload when a new SW takes control (handles the case where SW was already waiting)
+  navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+}
+</script>
 </body>
 </html>
