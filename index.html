@@ -1141,10 +1141,11 @@ async function _fetchCloudData(userId) {
     // Extract performedTypes from notes prefix "[TYPES:R,I] real notes"
     let rawNotes = d.notes || '';
     let performedTypes = [];
-    // Ownership records are tagged with a "[OWNERSHIP]" notes prefix
-    let recordType = 'maintenance';
+    // recordType is stored explicitly; fall back to partType (and the legacy
+    // "[OWNERSHIP]" notes prefix from early records) for backward compatibility.
     const om = rawNotes.match(/^\[OWNERSHIP\]\s*/);
-    if (om || d.partType === 'ownership') { recordType = 'ownership'; if (om) rawNotes = rawNotes.slice(om[0].length); }
+    const recordType = d.recordType || ((om || d.partType === 'ownership') ? 'ownership' : 'maintenance');
+    if (om) rawNotes = rawNotes.slice(om[0].length);
     const m = rawNotes.match(/^\[TYPES:([A-Z,]+)\]\s*/);
     if (m) { performedTypes = m[1].split(','); rawNotes = rawNotes.slice(m[0].length); }
     return {
@@ -1297,7 +1298,7 @@ async function syncItemDelete(itemId) { if (!isOnline()||!AW_SESSION) return; tr
 async function syncHistoryCreate(record) {
   if (!isOnline()||!AW_SESSION) return;
   try {
-    await awCreate('service_records',{motorcycleId:record.bikeId,maintenanceItemId:record.itemId||record.id,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:record.partType||'',partLabel:record.partLabel,serviceDate:record.date,mileageAtService:record.km,cost:record.cost||null,notes:record.notes||null},record.id);
+    await awCreate('service_records',{motorcycleId:record.bikeId,maintenanceItemId:record.itemId||record.id,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:record.partType||'',recordType:record.recordType||'maintenance',partLabel:record.partLabel,serviceDate:record.date,mileageAtService:record.km,cost:record.cost||null,notes:record.notes||null},record.id);
   } catch(err){ console.warn('syncHistoryCreate failed:',err.message); }
 }
 async function syncHistoryDelete(recordId) { if (!isOnline()||!AW_SESSION) return; try{await awDelete('service_records',recordId);}catch{} }
@@ -1934,7 +1935,7 @@ async function doCompleteService() {
     if (saveBtn){saveBtn.textContent='Saving…';saveBtn.style.pointerEvents='none';}
     try {
       const notesWithTypes = '[TYPES:'+performedTypes.join(',')+'] '+(newRecord.notes||'');
-      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
+      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',recordType:'maintenance',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
       await awUpdate('maintenance_items',updatedItem.id,{
         lastServiceKm:updatedItem.lastKm, lastServiceDate:updatedItem.lastDate,
         nextDueKm:       updatedItem.nextKm   ?? null,
@@ -2074,11 +2075,11 @@ async function saveOwnershipDetails() {
     if (isOnline() && AW_SESSION) {
       try {
         await awCreate('service_records', {
-          motorcycleId: ownRecord.bikeId, maintenanceItemId: ownRecord.id,
+          motorcycleId: ownRecord.bikeId,
           userId: AW_SESSION.userId, completedBy: AW_SESSION.userId,
-          partType: 'ownership', partLabel: ownRecord.partLabel,
+          partType: 'ownership', recordType: 'ownership', partLabel: ownRecord.partLabel,
           serviceDate: ownRecord.date, mileageAtService: ownRecord.km,
-          cost: ownRecord.cost || null, notes: '[OWNERSHIP] ',
+          cost: ownRecord.cost || null, notes: ownRecord.notes || null,
         }, ownRecord.id);
       } catch(err) {
         showToast('⚠️ Ownership saved, but cost could not sync: ' + (err.message || 'error'));
