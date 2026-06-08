@@ -331,7 +331,7 @@ html,body{overscroll-behavior-y:none}
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: v20260527-070010</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: <span id="build-stamp">—</span></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
       <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
@@ -677,6 +677,9 @@ const APPWRITE_PROJECT_ID = '6a0fce4800389b0e9917';
 const APPWRITE_DATABASE   = 'moto_maintain_db';
 
 // ─── APP STATE ────────────────────────────────────────────────────
+// APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
+// the service-worker VERSION so you can compare the Build stamp across devices.
+const APP_BUILD = 'v2026-06-08-122920';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -2878,6 +2881,8 @@ window.showDebugInfo = async function() {
   loadThemeOnly();
   const dateEl=document.getElementById('dash-date');
   if(dateEl) dateEl.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const buildEl=document.getElementById('build-stamp');
+  if(buildEl) buildEl.textContent=APP_BUILD;
   renderTemplates('naked'); renderTypeSwitcher();
 
   if(!isOnline()){const saved=loadSession();if(saved){hideAuthOverlay();initAppForUser(saved);}else showAuthOverlay();return;}
