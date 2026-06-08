@@ -679,7 +679,7 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // ─── APP STATE ────────────────────────────────────────────────────
 // APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
 // the service-worker VERSION so you can compare the Build stamp across devices.
-const APP_BUILD = 'v2026-06-08-123758';
+const APP_BUILD = 'v2026-06-08-124630';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -1695,11 +1695,12 @@ async function saveRenewal() {
       // Offline — apply locally only
       bike[cfg.field] = newDate;
     }
-    // Optional: log the renewal cost into history
+    // Always log the renewal into service history (cost is optional).
     const costAmount = parseFloat(document.getElementById('renewal-cost-amount')?.value) || 0;
     const costDate = document.getElementById('renewal-cost-date')?.value || new Date().toISOString().split('T')[0];
-    let costLogged = false;
-    if (costAmount > 0) costLogged = await logOwnershipCost(bike, cfg.costLabel || 'Ownership Renewal', costAmount, costDate);
+    const noteText = (_renewalType === 'inspection' ? 'Next inspection: ' : 'New expiry: ') + fmtDate(newDate);
+    const logged = await logOwnershipCost(bike, cfg.costLabel || 'Ownership Renewal', costAmount, costDate, noteText);
+    const costLogged = logged && costAmount > 0;
     saveState();
     closeModal('renewal');
     renderDashboard();
@@ -1717,12 +1718,13 @@ async function saveRenewal() {
   }
 }
 
-// Create an ownership-cost history record (reused by renewal flows).
-async function logOwnershipCost(bike, label, amount, dateStr) {
+// Create an ownership history record (reused by renewal flows). Cost is
+// optional — a renewal is logged even when no cost is entered.
+async function logOwnershipCost(bike, label, amount, dateStr, notesText) {
   const rec = {
     id: uid(), bikeId: bike.id, itemId: null,
     partLabel: label, partType: 'ownership', recordType: 'ownership',
-    km: bike.km || 0, date: dateStr, cost: amount, notes: '',
+    km: bike.km || 0, date: dateStr, cost: amount || 0, notes: notesText || '',
     completedAt: new Date().toISOString(), performedTypes: [],
   };
   if (isOnline() && AW_SESSION) {
@@ -1739,7 +1741,7 @@ async function logOwnershipCost(bike, label, amount, dateStr) {
         cost: rec.cost || null, notes: rec.notes || null,
       }, rec.id);
     } catch(err) {
-      showToast('❌ Cost not saved to cloud: ' + (err.message || 'error'));
+      showToast('❌ Renewal record not saved to cloud: ' + (err.message || 'error'));
       return false;   // surface the failure instead of pretending it saved
     }
   }
