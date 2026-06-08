@@ -1,0 +1,11 @@
+#!/bin/sh
+# Auto-bump the service-worker VERSION whenever app files change, so installed
+# PWAs pick up the new deploy. Never blocks a commit if Node is unavailable.
+changed=$(git diff --cached --name-only)
+case "$changed" in
+  *index.html*|*sw.js*|*manifest.json*)
+    node "$(git rev-parse --show-toplevel)/.githooks/bump-sw-version.js" || exit 0
+    git add sw.js
+    ;;
+esac
+exit 0
