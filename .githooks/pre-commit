@@ -5,7 +5,7 @@ changed=$(git diff --cached --name-only)
 case "$changed" in
   *index.html*|*sw.js*|*manifest.json*)
     node "$(git rev-parse --show-toplevel)/.githooks/bump-sw-version.js" || exit 0
-    git add sw.js
+    git add sw.js index.html
     ;;
 esac
 exit 0
