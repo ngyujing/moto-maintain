@@ -404,7 +404,10 @@ select.form-input option{background:var(--s3)}
 <div id="page-history" class="page">
   <div class="page-header">
     <div><div class="page-title" id="hist-title">Service History</div><div class="page-sub" id="hist-sub"></div></div>
-    <select class="form-input" style="width:160px;padding:8px 12px;font-size:12px" id="hist-bike-filter" onchange="renderHistory()"><option value="all">All bikes</option></select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select class="form-input" style="width:150px;padding:8px 12px;font-size:12px" id="hist-type-filter" onchange="renderHistory()"><option value="all">All types</option><option value="maintenance">🔧 Maintenance</option><option value="ownership">📋 Ownership</option></select>
+      <select class="form-input" style="width:150px;padding:8px 12px;font-size:12px" id="hist-bike-filter" onchange="renderHistory()"><option value="all">All bikes</option></select>
+    </div>
   </div>
   <div class="grid2" style="margin-bottom:20px">
     <div class="stat-card"><div class="stat-label">Total Services</div><div class="stat-val" id="hist-count">0</div></div>
@@ -640,6 +643,15 @@ select.form-input option{background:var(--s3)}
       <div class="form-group"><label class="form-label">Last Inspection Date</label><input id="ow-insp" type="date" class="form-input"/></div>
       <div class="form-group"><label class="form-label">Next Inspection Date <span style="color:var(--text3);font-weight:400;text-transform:none;font-size:9px">(auto-calculated)</span></label><input id="ow-next-insp" type="date" class="form-input" readonly style="opacity:.6"/></div>
     </div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--s4)">
+      <div style="font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">💰 Log Cost for this Update (optional)</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">What was renewed/updated?</label><input id="ow-cost-desc" type="text" class="form-input" placeholder="e.g. Road Tax Renewal"/></div>
+        <div class="form-group"><label class="form-label">Cost (<span class="currency-display">S$</span>)</label><input id="ow-cost-amount" type="number" min="0" step="0.01" class="form-input" placeholder="0.00"/></div>
+        <div class="form-group"><label class="form-label">Date</label><input id="ow-cost-date" type="date" class="form-input"/></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Enter a cost to record this update in your history.</div>
+    </div>
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('ownership')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="saveOwnershipDetails()">✓ Save</button>
@@ -725,6 +737,7 @@ function fmtDate(d) {
 function icon(partType) {
   if (!partType) return '🔧';
   const t = String(partType).toLowerCase();
+  if (t.includes('ownership'))                    return '📋';
   if (t.includes('air'))                          return '💨';
   if (t.includes('fork'))                         return '🛞';
   if (t.includes('transmission')||t.includes('gear')) return '🧴';
@@ -1128,11 +1141,15 @@ async function _fetchCloudData(userId) {
     // Extract performedTypes from notes prefix "[TYPES:R,I] real notes"
     let rawNotes = d.notes || '';
     let performedTypes = [];
+    // Ownership records are tagged with a "[OWNERSHIP]" notes prefix
+    let recordType = 'maintenance';
+    const om = rawNotes.match(/^\[OWNERSHIP\]\s*/);
+    if (om || d.partType === 'ownership') { recordType = 'ownership'; if (om) rawNotes = rawNotes.slice(om[0].length); }
     const m = rawNotes.match(/^\[TYPES:([A-Z,]+)\]\s*/);
     if (m) { performedTypes = m[1].split(','); rawNotes = rawNotes.slice(m[0].length); }
     return {
       id:d.$id, bikeId:d.motorcycleId, itemId:d.maintenanceItemId,
-      partLabel:d.partLabel, partType:d.partType, km:d.mileageAtService,
+      partLabel:d.partLabel, partType:d.partType, recordType, km:d.mileageAtService,
       date:d.serviceDate, cost:d.cost||0, notes:rawNotes, completedAt:d.$createdAt,
       performedTypes,
     };
@@ -1910,7 +1927,7 @@ async function doCompleteService() {
   // Multi-select types performed in this service
   if (_completeSelectedTypes.length === 0) { showToast('⚠️ Pick at least one service type performed'); return; }
   const performedTypes = _completeSelectedTypes.slice();
-  const newRecord={id:uid(),bikeId:item.bikeId,itemId:item.id,partLabel:item.partLabel,partType:item.partType,km,date,cost,notes,completedAt:new Date().toISOString(),performedTypes:performedTypes.join(',')};
+  const newRecord={id:uid(),bikeId:item.bikeId,itemId:item.id,partLabel:item.partLabel,partType:item.partType,recordType:'maintenance',km,date,cost,notes,completedAt:new Date().toISOString(),performedTypes:performedTypes.join(',')};
 
   if (isOnline()&&AW_SESSION) {
     const saveBtn=m.querySelector('.btn-primary');
@@ -1988,6 +2005,10 @@ function openOwnershipEdit(bikeId) {
   setVal('ow-coe',      bike.coeExpiry);
   setVal('ow-insp',     bike.inspectionDate);
   setVal('ow-next-insp',bike.nextInspectionDate);
+  // Reset cost-logging fields each time the modal opens
+  setVal('ow-cost-desc',   '');
+  setVal('ow-cost-amount', '');
+  setVal('ow-cost-date',   new Date().toISOString().split('T')[0]);
   // Wire last inspection change to auto-calc next
   document.getElementById('ow-insp').onchange = function() {
     const regDate = document.getElementById('ow-reg-date').value || (bike.year + '-01-01');
@@ -2038,10 +2059,39 @@ async function saveOwnershipDetails() {
   }
   // Update local state
   Object.assign(bike, updates);
+
+  // ── Optional: log a cost for this ownership update into history ──────
+  const costAmount = parseFloat(getVal('ow-cost-amount')) || 0;
+  if (costAmount > 0) {
+    const costDesc = getVal('ow-cost-desc') || 'Ownership Documents Update';
+    const costDate = getVal('ow-cost-date') || new Date().toISOString().split('T')[0];
+    const ownRecord = {
+      id: uid(), bikeId: bike.id, itemId: null,
+      partLabel: costDesc, partType: 'ownership', recordType: 'ownership',
+      km: bike.km || 0, date: costDate, cost: costAmount, notes: '',
+      completedAt: new Date().toISOString(), performedTypes: [],
+    };
+    if (isOnline() && AW_SESSION) {
+      try {
+        await awCreate('service_records', {
+          motorcycleId: ownRecord.bikeId, maintenanceItemId: ownRecord.id,
+          userId: AW_SESSION.userId, completedBy: AW_SESSION.userId,
+          partType: 'ownership', partLabel: ownRecord.partLabel,
+          serviceDate: ownRecord.date, mileageAtService: ownRecord.km,
+          cost: ownRecord.cost || null, notes: '[OWNERSHIP] ',
+        }, ownRecord.id);
+      } catch(err) {
+        showToast('⚠️ Ownership saved, but cost could not sync: ' + (err.message || 'error'));
+      }
+    }
+    APP.history.push(ownRecord);
+  }
+
   saveState();
   closeModal('ownership');
   renderBikeDetail(bike.id); // refresh the detail view
-  showToast('✓ Ownership details saved!');
+  renderHistory();
+  showToast(costAmount > 0 ? '✓ Ownership details & cost saved!' : '✓ Ownership details saved!');
 }
 
 function bikeDetailTab(tab, el) {
@@ -2120,7 +2170,7 @@ function renderBikeDetail(bikeId) {
                 <div class="tl-card">
                   <div class="tl-top"><span style="font-size:15px">${icon(h.partType)}</span>
                   <span class="tl-part">${h.partLabel}</span><span class="tl-date">${fmtDate(h.date)}</span></div>
-                  <div class="tl-details"><span>📍 ${fmtKm(h.km)}</span>${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>${h.notes}</span>`:''}</div>
+                  <div class="tl-details">${(h.recordType==='ownership'||h.partType==='ownership')?'':`<span>📍 ${fmtKm(h.km)}</span>`}${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>${h.notes}</span>`:''}</div>
                 </div>
               </div>`).join('')}</div>`}
         </div>
@@ -2368,12 +2418,15 @@ function renderHistory() {
     filterEl.value=APP.bikes.find(b=>b.id===cur)?cur:'all';
   }
   const filterBike=filterEl?filterEl.value:'all';
-  const records=APP.history.filter(h=>filterBike==='all'||h.bikeId===filterBike).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const typeEl=document.getElementById('hist-type-filter');
+  const filterType=typeEl?typeEl.value:'all';
+  const recType=h=>h.recordType||(h.partType==='ownership'?'ownership':'maintenance');
+  const records=APP.history.filter(h=>(filterBike==='all'||h.bikeId===filterBike)&&(filterType==='all'||recType(h)===filterType)).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
   const totalCost=records.reduce((s,r)=>s+(r.cost||0),0);
   if(countEl) countEl.textContent=records.length;
   if(spendEl) spendEl.innerHTML=`<span class="currency-display">${getCurrency()}</span> ${totalCost.toFixed(2)}`;
   if (records.length===0){listEl.innerHTML=`<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">📋</div><p style="color:var(--text3)">No service records yet. Mark maintenance items as done to start tracking history.</p></div>`;return;}
-  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);return `<div class="tl-item"><div class="tl-dot" style="background:var(--brand)"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${(()=>{const types=(h.performedTypes&&h.performedTypes.length)?h.performedTypes:(()=>{const it=APP.items.find(i=>i.id===h.itemId);return it?[it.serviceType||'I']:['I'];})();return types.map(t=>serviceTypeBadge(t)).join(' ');})()}<span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details"><span>📍 ${fmtKm(h.km)}</span>${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
+  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);const isOwn=recType(h)==='ownership';const badges=isOwn?`<span title="Ownership document update" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:var(--cyan)25;color:var(--cyan);font-family:'Exo 2',sans-serif;font-size:10px;font-weight:800;border:1px solid var(--cyan)44">📋 Ownership</span>`:(()=>{const types=(h.performedTypes&&h.performedTypes.length)?h.performedTypes:(()=>{const it=APP.items.find(i=>i.id===h.itemId);return it?[it.serviceType||'I']:['I'];})();return types.map(t=>serviceTypeBadge(t)).join(' ');})();return `<div class="tl-item"><div class="tl-dot" style="background:${isOwn?'var(--cyan)':'var(--brand)'}"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${badges}<span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details">${isOwn?'':`<span>📍 ${fmtKm(h.km)}</span>`}${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
 }
 
 async function deleteServiceRecord(recordId) {
