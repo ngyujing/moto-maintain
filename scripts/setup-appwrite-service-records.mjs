@@ -19,7 +19,7 @@ const ENDPOINT   = process.env.APPWRITE_ENDPOINT   || 'https://sgp.cloud.appwrit
 const PROJECT_ID = process.env.APPWRITE_PROJECT_ID || '6a0fce4800389b0e9917';
 const DATABASE   = process.env.APPWRITE_DATABASE   || 'moto_maintain_db';
 const COLLECTION = 'service_records';
-const API_KEY    = process.env.APPWRITE_API_KEY;
+const API_KEY    = process.env.APPWRITE_API_KEY; || 'standard_f14780d317885e010a14afbe2e7a4a852b21de1c2e6577e6a740f8a8fb2e1ac9258cf316356bc50a65ba00110ce365b5953ce50d0e65d5c0c6f2a10c9dadd5bf0d601add207f2513598d29f0565f32204ab5da27b71932771f6f413dafd077bd0054a49c7f0bdda1996e2c89e44b30bc08524c9cc16f771c6735c662737c42ec';
 
 if (!API_KEY) {
   console.error('❌ Missing APPWRITE_API_KEY. Provide a server API key with Databases read+write scope.');
