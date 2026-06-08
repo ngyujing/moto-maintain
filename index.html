@@ -242,6 +242,13 @@ select.form-input option{background:var(--s3)}
 .ci-toggle.on::after{transform:translateX(14px)}
 .ci-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;border-radius:4px;flex-shrink:0;line-height:1}
 .ci-del:hover{color:var(--red)}
+/* Pull-to-refresh (home-screen PWA has no browser refresh) */
+html,body{overscroll-behavior-y:none}
+#main{overscroll-behavior-y:contain}
+#ptr{position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;margin-left:-19px;width:38px;height:38px;border-radius:50%;background:var(--s2,#1a1f29);border:1px solid var(--border,#2a2f3a);box-shadow:0 6px 18px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:10000;opacity:0;transform:translateY(-64px);pointer-events:none}
+#ptr-icon{font-size:18px;color:var(--brand,#f97316);line-height:1}
+#ptr-icon.spinning{animation:ptr-spin .7s linear infinite}
+@keyframes ptr-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body data-theme="dark">
@@ -283,10 +290,14 @@ select.form-input option{background:var(--s3)}
     <span class="topbar-title">MotoMaintain</span>
   </div>
   <div class="topbar-right">
+    <div class="topbar-btn" onclick="forceRefresh()" title="Refresh app (get latest version)">↻</div>
     <div class="topbar-btn" onclick="nav('settings',null);setActiveNav('settings')" title="Settings">⚙️</div>
     <div class="topbar-btn" onclick="openModal('addBike')" title="Add Bike">＋</div>
   </div>
 </div>
+
+<!-- PULL-TO-REFRESH INDICATOR -->
+<div id="ptr"><div id="ptr-icon">↓</div></div>
 
 <!-- SIDEBAR -->
 <nav id="sidebar">
@@ -2905,5 +2916,74 @@ window.showDebugInfo = async function() {
     <div class="bnav-item" id="bnav-overview" onclick="nav('overview',null);setActiveNav('overview')"><span class="bnav-icon">🔭</span><span class="bnav-label">Overview</span></div>
   </div>
 </nav>
+
+<script>
+// ─── PULL-TO-REFRESH & CACHE-BUSTING RELOAD ───────────────────────
+// A home-screen (standalone) PWA has no address bar and no native refresh,
+// and the OS caches the launch HTML — so new deploys never show up. These
+// reload to a unique URL to defeat the browser/CDN cache and fetch the
+// latest index.html.
+function forceRefresh() {
+  try {
+    const base = location.href.split('#')[0].split('?')[0];
+    location.replace(base + '?v=' + Date.now());
+  } catch (e) {
+    location.reload();
+  }
+}
+
+(function () {
+  const THRESHOLD = 70;            // px of pull needed to trigger
+  let startY = 0, dist = 0, pulling = false, refreshing = false;
+  const mainEl = () => document.getElementById('main');
+  const ptr    = () => document.getElementById('ptr');
+  const icon   = () => document.getElementById('ptr-icon');
+  const atTop  = () => { const m = mainEl(); return m && m.scrollTop <= 0; };
+
+  function setIndicator(pull) {
+    const p = ptr(), ic = icon();
+    if (!p) return;
+    p.style.opacity = String(Math.min(pull / THRESHOLD, 1));
+    p.style.transform = 'translateY(' + Math.min(pull, 80) + 'px)';
+    if (ic) ic.textContent = dist >= THRESHOLD ? '↑' : '↓';
+  }
+  function resetIndicator() {
+    const p = ptr(), ic = icon();
+    if (p) { p.style.opacity = '0'; p.style.transform = 'translateY(-64px)'; }
+    if (ic) { ic.classList.remove('spinning'); ic.textContent = '↓'; }
+  }
+  function triggerRefresh() {
+    refreshing = true;
+    const p = ptr(), ic = icon();
+    if (p) { p.style.opacity = '1'; p.style.transform = 'translateY(12px)'; }
+    if (ic) { ic.textContent = '⟳'; ic.classList.add('spinning'); }
+    setTimeout(forceRefresh, 300);
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    if (refreshing || e.touches.length !== 1 || !atTop()) { pulling = false; return; }
+    startY = e.touches[0].clientY; dist = 0; pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!pulling || refreshing) return;
+    const d = e.touches[0].clientY - startY;
+    if (d > 0 && atTop()) {
+      e.preventDefault();           // override native overscroll/refresh
+      dist = d;
+      setIndicator(d * 0.5);        // damped feel
+    } else {
+      pulling = false; resetIndicator();
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (!pulling || refreshing) return;
+    pulling = false;
+    if (dist >= THRESHOLD) triggerRefresh();
+    else resetIndicator();
+  });
+})();
+</script>
 </body>
 </html>
