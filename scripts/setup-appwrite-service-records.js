@@ -8,12 +8,13 @@
  * Run it once with a server API key (Databases scope: read + write):
  *
  *   npm install node-appwrite
- *   APPWRITE_API_KEY=YOUR_SERVER_KEY node scripts/setup-appwrite-service-records.mjs
+ *   node scripts/setup-appwrite-service-records.js
  *
- * Endpoint / project / database default to the values used by index.html and can
- * be overridden via env vars: APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_DATABASE.
+ * Endpoint / project / database / key default to the values below and can be
+ * overridden via env vars: APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID,
+ * APPWRITE_DATABASE, APPWRITE_API_KEY.
  */
-import { Client, Databases } from 'node-appwrite';
+const { Client, Databases } = require('node-appwrite');
 
 const ENDPOINT   = process.env.APPWRITE_ENDPOINT   || 'https://sgp.cloud.appwrite.io/v1';
 const PROJECT_ID = process.env.APPWRITE_PROJECT_ID || '6a0fce4800389b0e9917';
