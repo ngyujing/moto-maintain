@@ -2984,6 +2984,32 @@ function forceRefresh() {
     else resetIndicator();
   });
 })();
+
+// ─── SERVICE WORKER (auto-update) ─────────────────────────────────
+// Network-first for HTML means each online launch automatically loads the
+// latest deploy. If a new version is detected while the app is open, reload
+// to pick it up.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+      // Check for a newer worker now, and periodically while the app stays open.
+      reg.update().catch(() => {});
+      setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          // A new version finished installing AND an old one was already in
+          // control -> this is a genuine update (not first install).
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            try { showToast('🔄 Updating to the latest version…'); } catch (e) {}
+            setTimeout(() => location.reload(), 900);
+          }
+        });
+      });
+    }).catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
