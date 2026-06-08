@@ -679,7 +679,7 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // ─── APP STATE ────────────────────────────────────────────────────
 // APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
 // the service-worker VERSION so you can compare the Build stamp across devices.
-const APP_BUILD = 'v2026-06-08-122920';
+const APP_BUILD = 'v2026-06-08-123758';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -1698,7 +1698,8 @@ async function saveRenewal() {
     // Optional: log the renewal cost into history
     const costAmount = parseFloat(document.getElementById('renewal-cost-amount')?.value) || 0;
     const costDate = document.getElementById('renewal-cost-date')?.value || new Date().toISOString().split('T')[0];
-    if (costAmount > 0) await logOwnershipCost(bike, cfg.costLabel || 'Ownership Renewal', costAmount, costDate);
+    let costLogged = false;
+    if (costAmount > 0) costLogged = await logOwnershipCost(bike, cfg.costLabel || 'Ownership Renewal', costAmount, costDate);
     saveState();
     closeModal('renewal');
     renderDashboard();
@@ -1708,7 +1709,7 @@ async function saveRenewal() {
       renderBikeDetail(bike.id);
       bikeDetailTab('ownership', null);
     }
-    showToast('✓ ' + cfg.title + (costAmount > 0 ? ' · ' + getCurrency() + ' ' + costAmount.toFixed(2) : '') + ' — next due: ' + fmtDate(newDate));
+    showToast('✓ ' + cfg.title + (costAmount > 0 && costLogged ? ' · ' + getCurrency() + ' ' + costAmount.toFixed(2) : '') + ' — next due: ' + fmtDate(newDate));
   } catch(err) {
     showToast('❌ Could not save: ' + (err.message || 'error'));
   } finally {
@@ -1728,16 +1729,22 @@ async function logOwnershipCost(bike, label, amount, dateStr) {
     try {
       await awCreate('service_records', {
         motorcycleId: rec.bikeId,
+        // Use the record's own id here: `maintenanceItemId` may be a required
+        // attribute in the collection, and ownership records have no real
+        // maintenance item. A harmless self-reference satisfies the schema.
+        maintenanceItemId: rec.id,
         userId: AW_SESSION.userId, completedBy: AW_SESSION.userId,
         partType: 'ownership', recordType: 'ownership', partLabel: rec.partLabel,
         serviceDate: rec.date, mileageAtService: rec.km,
         cost: rec.cost || null, notes: rec.notes || null,
       }, rec.id);
     } catch(err) {
-      showToast('⚠️ Renewal saved, but cost could not sync: ' + (err.message || 'error'));
+      showToast('❌ Cost not saved to cloud: ' + (err.message || 'error'));
+      return false;   // surface the failure instead of pretending it saved
     }
   }
   APP.history.push(rec);
+  return true;
 }
 
 function saveOwnershipReminderDays() {
