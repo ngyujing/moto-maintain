@@ -679,7 +679,7 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // ─── APP STATE ────────────────────────────────────────────────────
 // APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
 // the service-worker VERSION so you can compare the Build stamp across devices.
-const APP_BUILD = 'v2026-06-09-032111';
+const APP_BUILD = 'v2026-06-09-033004';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -1311,7 +1311,7 @@ async function syncItemDelete(itemId) { if (!isOnline()||!AW_SESSION) return; tr
 async function syncHistoryCreate(record) {
   if (!isOnline()||!AW_SESSION) return;
   try {
-    await awCreate('service_records',{motorcycleId:record.bikeId,maintenanceItemId:record.itemId||record.id,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:record.partType||'',recordType:record.recordType||'maintenance',partLabel:record.partLabel,serviceDate:record.date,mileageAtService:record.km,cost:record.cost||null,notes:record.notes||null},record.id);
+    await awCreate('service_records',{motorcycleId:record.bikeId,maintenanceItemId:record.itemId||record.id,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:record.partType||'',partLabel:record.partLabel,serviceDate:record.date,mileageAtService:record.km,cost:record.cost||null,notes:record.notes||null},record.id);
   } catch(err){ console.warn('syncHistoryCreate failed:',err.message); }
 }
 async function syncHistoryDelete(recordId) { if (!isOnline()||!AW_SESSION) return; try{await awDelete('service_records',recordId);}catch{} }
@@ -1738,12 +1738,15 @@ async function logOwnershipCost(bike, label, amount, dateStr, notesText) {
         // maintenance item. A harmless self-reference satisfies the schema.
         maintenanceItemId: rec.id,
         userId: AW_SESSION.userId, completedBy: AW_SESSION.userId,
-        partType: 'ownership', recordType: 'ownership', partLabel: rec.partLabel,
+        // No `recordType` attribute: ownership is encoded via partType plus an
+        // [OWNERSHIP] note marker, both of which the fetch already recognises.
+        partType: 'ownership', partLabel: rec.partLabel,
         serviceDate: rec.date, mileageAtService: rec.km,
-        cost: rec.cost || null, notes: rec.notes || null,
+        cost: rec.cost || null, notes: '[OWNERSHIP] ' + (rec.notes || ''),
       }, rec.id);
     } catch(err) {
-      showToast('❌ Renewal record not saved to cloud: ' + (err.message || 'error'));
+      console.error('[ownership save] cloud write failed:', err.code, err.message);
+      alert('Could not save this record to the cloud.\n\nReason: ' + (err.message || 'unknown') + (err.code ? '\nCode: ' + err.code : '') + '\n\nThe entry shows locally but will not survive a refresh until this is resolved.');
       return false;   // record still shows locally; surface the failure
     }
   }
@@ -1997,7 +2000,7 @@ async function doCompleteService() {
     if (saveBtn){saveBtn.textContent='Saving…';saveBtn.style.pointerEvents='none';}
     try {
       const notesWithTypes = '[TYPES:'+performedTypes.join(',')+'] '+(newRecord.notes||'');
-      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',recordType:'maintenance',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
+      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
       await awUpdate('maintenance_items',updatedItem.id,{
         lastServiceKm:updatedItem.lastKm, lastServiceDate:updatedItem.lastDate,
         nextDueKm:       updatedItem.nextKm   ?? null,
