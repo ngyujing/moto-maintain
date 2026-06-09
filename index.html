@@ -3322,7 +3322,10 @@ async function submitAddCar() {
         serviceType:item.serviceType||'I', remarks:item.remarks||''},item.id)));
     } catch(err) {
       if (btn){btn.textContent='✓ Add Car';btn.style.pointerEvents='';}
-      showToast('❌ Could not save to database: '+(err.message||'unknown error'));
+      const msg=err.message||'unknown error';
+      showToast(/attribute/i.test(msg)
+        ? '❌ Car database not fully set up. Run scripts/setup-appwrite-cars.js, then retry. ('+msg+')'
+        : '❌ Could not save to database: '+msg);
       return;
     } finally {
       if (btn){btn.textContent='✓ Add Car';btn.style.pointerEvents='';}
