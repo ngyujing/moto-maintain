@@ -679,7 +679,7 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // ─── APP STATE ────────────────────────────────────────────────────
 // APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
 // the service-worker VERSION so you can compare the Build stamp across devices.
-const APP_BUILD = 'v2026-06-09-034743';
+const APP_BUILD = 'v2026-06-09-040034';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -1622,8 +1622,8 @@ const RENEWAL_CFG = {
         <input id="renewal-new-date" type="date" class="form-input" readonly style="opacity:.7"/>
       </div>`,
     calc: (bike) => {
-      const base = bike.coeExpiry && new Date(bike.coeExpiry) > new Date()
-        ? new Date(bike.coeExpiry) : new Date();
+      // Always extend from the current COE expiry date, independent of today's date.
+      const base = bike.coeExpiry ? new Date(bike.coeExpiry) : new Date();
       const sel = document.getElementById('renewal-period');
       const years = parseInt(sel?.value || 10);
       base.setFullYear(base.getFullYear() + years);
