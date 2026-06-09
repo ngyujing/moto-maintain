@@ -679,7 +679,7 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // ─── APP STATE ────────────────────────────────────────────────────
 // APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
 // the service-worker VERSION so you can compare the Build stamp across devices.
-const APP_BUILD = 'v2026-06-08-124630';
+const APP_BUILD = 'v2026-06-09-032111';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -1727,6 +1727,8 @@ async function logOwnershipCost(bike, label, amount, dateStr, notesText) {
     km: bike.km || 0, date: dateStr, cost: amount || 0, notes: notesText || '',
     completedAt: new Date().toISOString(), performedTypes: [],
   };
+  // Show it immediately in history; persist to the cloud right after.
+  APP.history.push(rec);
   if (isOnline() && AW_SESSION) {
     try {
       await awCreate('service_records', {
@@ -1742,10 +1744,9 @@ async function logOwnershipCost(bike, label, amount, dateStr, notesText) {
       }, rec.id);
     } catch(err) {
       showToast('❌ Renewal record not saved to cloud: ' + (err.message || 'error'));
-      return false;   // surface the failure instead of pretending it saved
+      return false;   // record still shows locally; surface the failure
     }
   }
-  APP.history.push(rec);
   return true;
 }
 
@@ -2115,11 +2116,36 @@ async function saveOwnershipDetails() {
       if (btn) { btn.textContent = '✓ Save'; btn.style.pointerEvents = ''; }
     }
   }
+  // Capture the document dates before applying, so we can log what changed.
+  const before = {
+    roadTaxExpiry:   bike.roadTaxExpiry   || '',
+    insuranceExpiry: bike.insuranceExpiry || '',
+    coeExpiry:       bike.coeExpiry        || '',
+    inspectionDate:  bike.inspectionDate   || '',
+  };
   // Update local state
   Object.assign(bike, updates);
+
+  // Log a service-history record for any renewable document whose date changed,
+  // so updating a doc via Edit shows up just like using the "Renewed" button.
+  const today = new Date().toISOString().split('T')[0];
+  const renewables = [
+    { field: 'roadTaxExpiry',   label: 'Road Tax Renewal',  noteDate: updates.roadTaxExpiry,   prefix: 'New expiry: ' },
+    { field: 'insuranceExpiry', label: 'Insurance Renewal', noteDate: updates.insuranceExpiry, prefix: 'New expiry: ' },
+    { field: 'coeExpiry',       label: 'COE Renewal',       noteDate: updates.coeExpiry,        prefix: 'New expiry: ' },
+    { field: 'inspectionDate',  label: 'Inspection',        noteDate: updates.nextInspectionDate || updates.inspectionDate, prefix: 'Next inspection: ' },
+  ];
+  for (const r of renewables) {
+    const newVal = updates[r.field] || '';
+    if (newVal && newVal !== before[r.field]) {
+      await logOwnershipCost(bike, r.label, 0, today, r.prefix + fmtDate(r.noteDate || newVal));
+    }
+  }
+
   saveState();
   closeModal('ownership');
   renderBikeDetail(bike.id); // refresh the detail view
+  renderHistory();
   showToast('✓ Ownership details saved!');
 }
 
