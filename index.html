@@ -292,7 +292,7 @@ html,body{overscroll-behavior-y:none}
   <div class="topbar-right">
     <div class="topbar-btn" onclick="forceRefresh()" title="Refresh app (get latest version)">↻</div>
     <div class="topbar-btn" onclick="nav('settings',null);setActiveNav('settings')" title="Settings">⚙️</div>
-    <div class="topbar-btn" onclick="openModal('addBike')" title="Add Bike">＋</div>
+    <div class="topbar-btn" onclick="openModal('addVehicle')" title="Add Vehicle">＋</div>
   </div>
 </div>
 
@@ -308,7 +308,7 @@ html,body{overscroll-behavior-y:none}
   <div class="nav-section">
     <div class="nav-label">Main</div>
     <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">📊</span>Dashboard<span class="nav-badge" id="sidebar-badge" style="display:none">0</span></div>
-    <div class="nav-item" onclick="nav('bikes',this)"><span class="nav-icon">🏍️</span>My Bikes</div>
+    <div class="nav-item" onclick="nav('bikes',this)"><span class="nav-icon">🚗</span>Vehicles</div>
     <div class="nav-item" onclick="nav('maintenance',this)"><span class="nav-icon">🔧</span>Maintenance</div>
     <div class="nav-item" onclick="nav('history',this)"><span class="nav-icon">📋</span>Service History</div>
     <div class="nav-item" onclick="nav('overview',this)"><span class="nav-icon">🔭</span>Overview</div>
@@ -334,14 +334,14 @@ html,body{overscroll-behavior-y:none}
     <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date">Loading...</div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:monospace">Build: <span id="build-stamp">—</span></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="sync-btn" class="btn btn-secondary" onclick="syncFromCloud()" title="Sync data from cloud">☁️ Sync</button>
-      <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
+      <button class="btn btn-primary" onclick="openModal('addVehicle')">＋ Add Vehicle</button>
     </div>
   </div>
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg)">🔴</div><div class="stat-label">Overdue</div><div class="stat-val" id="dash-overdue" style="color:var(--red)">0</div><div class="stat-sub">Needs immediate attention</div></div>
     <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🟡</div><div class="stat-label">Due Soon</div><div class="stat-val" id="dash-soon" style="color:var(--amber)">0</div><div class="stat-sub">Within 500 km or 30 days</div></div>
     <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">🟢</div><div class="stat-label">Up to Date</div><div class="stat-val" id="dash-ok" style="color:var(--green)">0</div><div class="stat-sub">All services current</div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:var(--glow)">🏍️</div><div class="stat-label">Total km tracked</div><div class="stat-val" id="dash-km" style="color:var(--brand)">0</div><div class="stat-sub">Across all bikes</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--glow)">🚗</div><div class="stat-label">Total km tracked</div><div class="stat-val" id="dash-km" style="color:var(--brand)">0</div><div class="stat-sub">Across all vehicles</div></div>
   </div>
   <div class="grid2" id="dash-charts-row" style="margin-bottom:24px">
     <div class="card" style="padding:20px">
@@ -363,10 +363,10 @@ html,body{overscroll-behavior-y:none}
   </div>
   <div id="dash-no-bikes" style="display:none">
     <div style="text-align:center;padding:40px 20px">
-      <div style="font-size:48px;margin-bottom:12px">🏍️</div>
-      <h3 style="margin-bottom:8px">Add your first motorcycle</h3>
-      <p style="color:var(--text3);font-size:13px;margin-bottom:16px">Set up your bike to start tracking service intervals</p>
-      <button class="btn btn-primary" style="margin:0 auto" onclick="openModal('addBike')">＋ Add Motorcycle</button>
+      <div style="font-size:48px;margin-bottom:12px">🏍️🚗</div>
+      <h3 style="margin-bottom:8px">Add your first vehicle</h3>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:16px">Set up a motorcycle or car to start tracking service intervals</p>
+      <button class="btn btn-primary" style="margin:0 auto" onclick="openModal('addVehicle')">＋ Add Vehicle</button>
     </div>
   </div>
   <div id="dash-overdue-hdr" style="margin-bottom:12px">
@@ -383,11 +383,16 @@ html,body{overscroll-behavior-y:none}
   </div>
 </div>
 
-<!-- BIKES -->
+<!-- VEHICLES -->
 <div id="page-bikes" class="page">
   <div class="page-header">
-    <div><div class="page-title">My Motorcycles</div><div class="page-sub" id="bikes-sub">0 bikes registered</div></div>
-    <button class="btn btn-primary" onclick="openModal('addBike')">＋ Add Bike</button>
+    <div><div class="page-title">My Vehicles</div><div class="page-sub" id="bikes-sub">0 vehicles</div></div>
+    <button class="btn btn-primary" onclick="openModal('addVehicle')">＋ Add Vehicle</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+    <button class="btn btn-primary btn-sm veh-filter-pill" data-f="all"  onclick="filterVehicles('all')">All</button>
+    <button class="btn btn-secondary btn-sm veh-filter-pill" data-f="moto" onclick="filterVehicles('moto')">🏍️ Motorcycles</button>
+    <button class="btn btn-secondary btn-sm veh-filter-pill" data-f="car"  onclick="filterVehicles('car')">🚗 Cars</button>
   </div>
   <div class="bike-grid" id="bike-grid"></div>
 </div>
@@ -416,8 +421,9 @@ html,body{overscroll-behavior-y:none}
   <div class="page-header">
     <div><div class="page-title" id="hist-title">Service History</div><div class="page-sub" id="hist-sub"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select class="form-input" style="width:150px;padding:8px 12px;font-size:12px" id="hist-kind-filter" onchange="renderHistory()"><option value="all">All vehicles</option><option value="moto">🏍️ Motorcycles</option><option value="car">🚗 Cars</option></select>
       <select class="form-input" style="width:150px;padding:8px 12px;font-size:12px" id="hist-type-filter" onchange="renderHistory()"><option value="all">All types</option><option value="maintenance">🔧 Maintenance</option><option value="ownership">📋 Ownership</option></select>
-      <select class="form-input" style="width:150px;padding:8px 12px;font-size:12px" id="hist-bike-filter" onchange="renderHistory()"><option value="all">All bikes</option></select>
+      <select class="form-input" style="width:160px;padding:8px 12px;font-size:12px" id="hist-bike-filter" onchange="renderHistory()"><option value="all">All vehicles</option></select>
     </div>
   </div>
   <div class="grid2" style="margin-bottom:20px">
@@ -598,6 +604,80 @@ html,body{overscroll-behavior-y:none}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-addVehicle">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><div class="modal-title">＋ Add Vehicle</div><div class="modal-close" onclick="closeModal('addVehicle')">✕</div></div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">What would you like to add?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn btn-secondary" style="display:flex;flex-direction:column;align-items:center;padding:22px 12px;height:auto" onclick="closeModal('addVehicle');openModal('addBike')"><span style="font-size:34px">🏍️</span><span style="margin-top:8px;font-weight:700">Motorcycle</span></button>
+      <button class="btn btn-secondary" style="display:flex;flex-direction:column;align-items:center;padding:22px 12px;height:auto" onclick="closeModal('addVehicle');openModal('addCar')"><span style="font-size:34px">🚗</span><span style="margin-top:8px;font-weight:700">Car</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addCar">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><div class="modal-title">🚗 Add Car</div><div class="modal-close" onclick="closeModal('addCar')">✕</div></div>
+    <div style="display:flex;gap:5px;margin-bottom:18px">
+      <div id="add-car-step-dot-1" style="flex:1;height:3px;border-radius:2px;background:var(--brand);transition:background .25s"></div>
+      <div id="add-car-step-dot-2" style="flex:1;height:3px;border-radius:2px;background:var(--s5);transition:background .25s"></div>
+      <div id="add-car-step-dot-3" style="flex:1;height:3px;border-radius:2px;background:var(--s5);transition:background .25s"></div>
+    </div>
+    <div id="add-car-step-1">
+      <div style="margin-bottom:14px"><div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 1 of 3 — Select Car Type</div><div style="font-size:12px;color:var(--text3)">Maintenance intervals are tailored to your car category.</div></div>
+      <div id="car-type-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"></div>
+      <div style="padding:9px 12px;border-radius:8px;font-size:11px;line-height:1.5;color:var(--text3);background:var(--s3);border:1px solid var(--border)">⚠️ <strong style="color:var(--text2)">Note:</strong> Always verify intervals with your car's owner manual.</div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal('addCar')">Cancel</button>
+        <button id="car-type-next-btn" class="btn btn-primary" style="flex:1;opacity:.5;pointer-events:none" onclick="addCarStep2()">Next →</button>
+      </div>
+    </div>
+    <div id="add-car-step-2" style="display:none">
+      <div style="margin-bottom:14px"><div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 2 of 3 — Car Details</div><div id="selected-car-type-badge" style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-family:'Exo 2',sans-serif;font-weight:700;background:var(--glow);color:var(--brand);border:1px solid rgba(249,115,22,0.25);margin-top:4px"></div></div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Make *</label><input id="car-make" type="text" class="form-input" placeholder="Toyota"/></div>
+        <div class="form-group"><label class="form-label">Model *</label><input id="car-model" type="text" class="form-input" placeholder="Corolla Altis"/></div>
+        <div class="form-group"><label class="form-label">Year *</label><input id="car-year" type="number" class="form-input" placeholder="2022" min="1900" max="2030"/></div>
+        <div class="form-group"><label class="form-label">Current km *</label><input id="car-km" type="number" class="form-input" placeholder="0" min="0"/></div>
+        <div class="form-group"><label class="form-label">Nickname</label><input id="car-nick" type="text" class="form-input" placeholder="Family car"/></div>
+        <div class="form-group"><label class="form-label">Color</label><input id="car-color" type="text" class="form-input" placeholder="Pearl White"/></div>
+        <div class="form-group"><label class="form-label">Registration No. (Plate)</label><input id="car-reg-num" type="text" class="form-input" placeholder="SGA1234X"/></div>
+        <div class="form-group"><label class="form-label">IU Number</label><input id="car-iu" type="text" class="form-input" placeholder="In-vehicle Unit"/></div>
+        <div class="form-group"><label class="form-label">Fuel Type</label><select id="car-fuel" class="form-input"><option value="">—</option><option value="petrol">Petrol</option><option value="diesel">Diesel</option><option value="hybrid">Hybrid</option><option value="ev">Electric (EV)</option></select></div>
+        <div class="form-group"><label class="form-label">Transmission</label><select id="car-transmission" class="form-input"><option value="">—</option><option value="auto">Automatic</option><option value="manual">Manual</option></select></div>
+        <div class="form-group"><label class="form-label">Engine Capacity</label><input id="car-engine-cc" type="text" class="form-input" placeholder="e.g. 1598 cc"/></div>
+        <div class="form-group"><label class="form-label">COE Category</label><select id="car-coe-cat" class="form-input"><option value="">—</option><option value="A">Cat A</option><option value="B">Cat B</option><option value="C">Cat C</option><option value="E">Cat E</option></select></div>
+        <div class="form-group full"><label class="form-label">VIN / Chassis No. (optional)</label><input id="car-vin" type="text" class="form-input" placeholder="JTDBR32E..."/></div>
+        <div class="form-group full" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+          <div style="font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">🇸🇬 Singapore Ownership Details (optional)</div>
+        </div>
+        <div class="form-group"><label class="form-label">Registration Date</label><input id="car-reg-date" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Road Tax Expiry</label><input id="car-roadtax" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Insurance Expiry</label><input id="car-insurance-exp" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Insurer Name</label><input id="car-insurer" type="text" class="form-input" placeholder="e.g. NTUC Income"/></div>
+        <div class="form-group"><label class="form-label">Policy Number</label><input id="car-policy" type="text" class="form-input" placeholder="e.g. AB-1234567"/></div>
+        <div class="form-group"><label class="form-label">COE Expiry</label><input id="car-coe" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Last Inspection Date</label><input id="car-insp" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Season Parking Expiry</label><input id="car-season" type="date" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Warranty Expiry</label><input id="car-warranty" type="date" class="form-input"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-secondary" style="flex:1" onclick="addCarStep1()">← Back</button>
+        <button class="btn btn-primary" style="flex:1" onclick="addCarStep3()">Next →</button>
+      </div>
+    </div>
+    <div id="add-car-step-3" style="display:none">
+      <div style="margin-bottom:12px"><div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Step 3 of 3 — Customise Service Intervals</div><div style="font-size:12px;color:var(--text3)">Toggle items off to skip them. Changes here do not affect default templates.</div></div>
+      <div id="car-custom-intervals-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:10px"></div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:12px" onclick="addCarCustomRow()">＋ Add Custom Item</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="addCarStep2Back()">← Back</button>
+        <button class="btn btn-primary" style="flex:1" onclick="submitAddCar()">✓ Add Car</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-odometer">
   <div class="modal" style="max-width:380px">
     <div class="modal-header"><div class="modal-title">⚡ Update Odometer</div><div class="modal-close" onclick="closeModal('odometer')">✕</div></div>
@@ -661,6 +741,19 @@ html,body{overscroll-behavior-y:none}
       <div class="form-group"><label class="form-label">COE Expiry</label><input id="ow-coe" type="date" class="form-input"/></div>
       <div class="form-group"><label class="form-label">Last Inspection Date</label><input id="ow-insp" type="date" class="form-input"/></div>
       <div class="form-group"><label class="form-label">Next Inspection Date <span style="color:var(--text3);font-weight:400;text-transform:none;font-size:9px">(auto-calculated)</span></label><input id="ow-next-insp" type="date" class="form-input" readonly style="opacity:.6"/></div>
+      <div class="form-group full" id="ow-car-extra" style="display:none">
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;margin-bottom:10px"><div style="font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">🚗 Car Details</div></div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Registration No. (Plate)</label><input id="ow-reg-num" type="text" class="form-input" placeholder="e.g. SGA1234X"/></div>
+          <div class="form-group"><label class="form-label">IU Number</label><input id="ow-iu" type="text" class="form-input" placeholder="In-vehicle Unit"/></div>
+          <div class="form-group"><label class="form-label">Fuel Type</label><select id="ow-fuel" class="form-input"><option value="">—</option><option value="petrol">Petrol</option><option value="diesel">Diesel</option><option value="hybrid">Hybrid</option><option value="ev">Electric (EV)</option></select></div>
+          <div class="form-group"><label class="form-label">Transmission</label><select id="ow-transmission" class="form-input"><option value="">—</option><option value="auto">Automatic</option><option value="manual">Manual</option></select></div>
+          <div class="form-group"><label class="form-label">Engine Capacity</label><input id="ow-engine-cc" type="text" class="form-input" placeholder="e.g. 1496 cc"/></div>
+          <div class="form-group"><label class="form-label">COE Category</label><select id="ow-coe-cat" class="form-input"><option value="">—</option><option value="A">Cat A</option><option value="B">Cat B</option><option value="C">Cat C</option><option value="E">Cat E</option></select></div>
+          <div class="form-group"><label class="form-label">Season Parking Expiry</label><input id="ow-season" type="date" class="form-input"/></div>
+          <div class="form-group"><label class="form-label">Warranty Expiry</label><input id="ow-warranty" type="date" class="form-input"/></div>
+        </div>
+      </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('ownership')">Cancel</button>
@@ -681,8 +774,9 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // the service-worker VERSION so you can compare the Build stamp across devices.
 const APP_BUILD = 'v2026-06-09-040507';
 const STORAGE_KEY = 'motomaintain_v1';
-const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
+const APP = { bikes:[], items:[], history:[], cars:[], carItems:[], carHistory:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
+let selectedCarType  = null;
 
 const STATUS_CFG = {
   overdue:        { order:0 },
@@ -702,6 +796,32 @@ const SERVICE_TYPES = {
 function serviceTypeBadge(code) {
   const t = SERVICE_TYPES[code] || SERVICE_TYPES.I;
   return `<span title="${t.full}" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:${t.color}25;color:${t.color};font-family:'Exo 2',sans-serif;font-size:11px;font-weight:800;border:1px solid ${t.color}44">${code||'I'}</span>`;
+}
+
+// ─── VEHICLE ACCESSORS (motorcycles + cars) ───────────────────────
+// Cars live in separate APP arrays and separate Appwrite collections, but the
+// UI presents a single unified "Vehicles" experience. These helpers return the
+// combined sets and route reads/writes to the correct collection by "kind".
+// A vehicle/item/record with kind!=='car' is treated as a motorcycle, so all
+// existing motorcycle behaviour is preserved untouched.
+function kindOf(v)    { return v && v.kind === 'car' ? 'car' : 'moto'; }
+function VEH()        { return APP.bikes.concat(APP.cars); }
+function VITEMS()     { return APP.items.concat(APP.carItems); }
+function VHIST()      { return APP.history.concat(APP.carHistory); }
+function vehArr(kind) { return kind === 'car' ? APP.cars : APP.bikes; }
+function itemArr(kind){ return kind === 'car' ? APP.carItems : APP.items; }
+function histArr(kind){ return kind === 'car' ? APP.carHistory : APP.history; }
+function findVeh(id)  { return APP.bikes.find(b=>b.id===id) || APP.cars.find(c=>c.id===id) || null; }
+function findItem(id) { return APP.items.find(i=>i.id===id) || APP.carItems.find(i=>i.id===id) || null; }
+function itemsOf(vid) { return VITEMS().filter(i=>i.bikeId===vid); }
+function typeDefsFor(kind) { return kind === 'car' ? CAR_TYPES : BIKE_TYPES; }
+function typeLabelOf(v){ const d=typeDefsFor(kindOf(v))[v.bikeType]; return d ? d.label : (v.bikeType||''); }
+function vehEmoji(v)  { return kindOf(v) === 'car' ? '🚗' : '🏍️'; }
+// Collection + foreign-key names per kind.
+function COLL(kind) {
+  return kind === 'car'
+    ? { veh:'cars',        item:'car_maintenance_items', rec:'car_service_records', fk:'carId' }
+    : { veh:'motorcycles', item:'maintenance_items',     rec:'service_records',     fk:'motorcycleId' };
 }
 
 // ─── HELPER FUNCTIONS ─────────────────────────────────────────────
@@ -751,6 +871,8 @@ function icon(partType) {
   if (!partType) return '🔧';
   const t = String(partType).toLowerCase();
   if (t.includes('ownership'))                    return '📋';
+  if (t.includes('cabin'))                        return '🌬️';
+  if (t.includes('aircon')||t.includes('a/c')||t.includes('air con')) return '❄️';
   if (t.includes('air'))                          return '💨';
   if (t.includes('fork'))                         return '🛞';
   if (t.includes('transmission')||t.includes('gear')) return '🧴';
@@ -767,6 +889,10 @@ function icon(partType) {
   if (t.includes('valve'))                        return '🔩';
   if (t.includes('clutch'))                       return '🪢';
   if (t.includes('roller'))                       return '🔘';
+  if (t.includes('wiper'))                        return '🌧️';
+  if (t.includes('timing'))                       return '⏱️';
+  if (t.includes('align')||t.includes('wheel'))   return '🛞';
+  if (t.includes('reduction'))                    return '🧴';
   return '🔧';
 }
 
@@ -1077,7 +1203,7 @@ async function doLogout() {
   document.cookie='a_session_'+APPWRITE_PROJECT_ID+'=; Max-Age=0; path=/; SameSite=None; Secure';
   try { localStorage.removeItem('cookieFallback'); } catch {}
   clearSession();
-  APP.bikes=[]; APP.items=[]; APP.history=[]; APP.nextId=1; APP.profile={name:'Rider',email:''};
+  APP.bikes=[]; APP.items=[]; APP.history=[]; APP.cars=[]; APP.carItems=[]; APP.carHistory=[]; APP.nextId=1; APP.profile={name:'Rider',email:''};
   clearState(); currentTheme='dark'; currentCurrency='SGD';
   document.body.setAttribute('data-theme','dark');
   showAuthOverlay(); renderAll(); nav('dashboard',null); setActiveNav('dashboard');
@@ -1168,6 +1294,52 @@ async function _fetchCloudData(userId) {
       performedTypes,
     };
   });
+
+  // ── Cars (separate collections, isolated) ───────────────────────────────
+  // Wrapped in try/catch so a missing/failed car collection (e.g. the setup
+  // script hasn't run yet) never breaks motorcycle loading above.
+  APP.cars = []; APP.carItems = []; APP.carHistory = [];
+  try {
+    const [carsRes, cItemsRes, cHistRes] = await Promise.all([
+      awList('cars',                  [Q.equal('userId',userId), Q.limit(100)]),
+      awList('car_maintenance_items', [Q.equal('userId',userId), Q.limit(500)]),
+      awList('car_service_records',   [Q.equal('userId',userId), Q.orderDesc('serviceDate'), Q.limit(500)]),
+    ]);
+    APP.cars = (carsRes.documents||[]).map(d=>({
+      id:d.$id, kind:'car', make:d.make, model:d.model, year:d.year, km:d.currentKm,
+      nickname:d.nickname||'', color:d.color||'', vin:d.vin||'',
+      bikeType:d.carType||'sedan', addedAt:d.$createdAt,
+      registrationDate:d.registrationDate||'', inspectionDate:d.inspectionDate||'',
+      nextInspectionDate:d.nextInspectionDate||'', roadTaxExpiry:d.roadTaxExpiry||'',
+      insuranceExpiry:d.insuranceExpiry||'', insuranceProvider:d.insuranceProvider||'',
+      insurancePolicyNo:d.insurancePolicyNo||'', coeExpiry:d.coeExpiry||'',
+      registrationNumber:d.registrationNumber||'', iuNumber:d.iuNumber||'',
+      fuelType:d.fuelType||'', transmission:d.transmission||'', engineCapacity:d.engineCapacity||'',
+      coeCategory:d.coeCategory||'', seasonParkingExpiry:d.seasonParkingExpiry||'', warrantyExpiry:d.warrantyExpiry||'',
+    }));
+    APP.carItems = (cItemsRes.documents||[]).map(d=>({
+      id:d.$id, kind:'car', bikeId:d.carId, partType:d.partType, partLabel:d.partLabel,
+      intervalKm:d.intervalKm, intervalDays:d.intervalDays,
+      lastKm:d.lastServiceKm, lastDate:d.lastServiceDate,
+      nextKm:d.nextDueKm, nextDate:d.nextDueDate,
+      status:d.serviceStatus||'never_serviced', note:'', isCustom:d.isCustomInterval||false,
+      serviceType:d.serviceType||'I', remarks:d.remarks||'',
+    }));
+    APP.carHistory = (cHistRes.documents||[]).map(d=>{
+      let rawNotes=d.notes||''; let performedTypes=[];
+      const om=rawNotes.match(/^\[OWNERSHIP\]\s*/);
+      const recordType=d.recordType||((om||d.partType==='ownership')?'ownership':'maintenance');
+      if(om) rawNotes=rawNotes.slice(om[0].length);
+      const tm=rawNotes.match(/^\[TYPES:([A-Z,]+)\]\s*/);
+      if(tm){performedTypes=tm[1].split(',');rawNotes=rawNotes.slice(tm[0].length);}
+      return {id:d.$id, kind:'car', bikeId:d.carId, itemId:d.maintenanceItemId, partLabel:d.partLabel,
+        partType:d.partType, recordType, km:d.mileageAtService, date:d.serviceDate, cost:d.cost||0,
+        notes:rawNotes, completedAt:d.$createdAt, performedTypes};
+    });
+    console.log('[Init] Cars loaded:', APP.cars.length, 'cars,', APP.carItems.length, 'items,', APP.carHistory.length, 'records');
+  } catch(carErr) {
+    console.warn('[Init] Car collections not loaded (run scripts/setup-appwrite-cars.js?):', carErr.code, carErr.message);
+  }
 }
 
 // Manual cloud sync — callable from a button or anywhere in the app
@@ -1465,6 +1637,142 @@ const BIKE_TYPES = {
   ]},
 };
 
+// ─── CAR TYPES ────────────────────────────────────────────────────
+// Sensible default service intervals for common car categories. Same item
+// shape as BIKE_TYPES {i,n,t,km,days,note} so all existing rendering, template
+// and estimation helpers work unchanged. Intervals follow typical
+// manufacturer/CARFAX/AutoZone guidance (km values). Always verify against the
+// owner's manual. Editable later via the Templates editor.
+const CAR_TYPES = {
+  sedan:{label:'Sedan',icon:'🚗',desc:'Standard saloon / passenger car. Civic, Corolla, Camry, Mazda 3.',source:'General passenger-car guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',         t:'R', km:10000,days:365,note:'Synthetic oil; 5,000 km if mostly short trips'},
+    {i:'🔧',n:'Oil Filter',          t:'R', km:10000,days:365,note:'Replace with every oil change'},
+    {i:'💨',n:'Air Filter',          t:'I', km:15000,days:365,note:'Inspect; halve in dusty conditions'},
+    {i:'💨',n:'Air Filter',          t:'R', km:30000,days:730},
+    {i:'🌬️',n:'Cabin Air Filter',    t:'R', km:15000,days:365,note:'Pollen/dust filter for the cabin'},
+    {i:'⚡',n:'Spark Plugs',         t:'R', km:60000,days:1460,note:'Iridium/platinum last longer'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'I', km:15000,days:365},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'R', km:40000,days:1460,note:'Replace at ~3mm'},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'I', km:20000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'R', km:60000,days:1460},
+    {i:'💧',n:'Brake Fluid',         t:'R', km:40000,days:730,note:'Hygroscopic; every 2 years'},
+    {i:'🌡️',n:'Coolant',             t:'R', km:100000,days:1825,note:'Long-life coolant ~5 years'},
+    {i:'🧴',n:'Transmission Fluid',  t:'R', km:60000,days:1460,note:'Auto; check manual for "lifetime" fluids'},
+    {i:'⏱️',n:'Timing Belt',         t:'R', km:100000,days:2190,note:'Belt-driven engines only; skip if timing chain'},
+    {i:'🔋',n:'12V Battery',         t:'I', km:0,    days:180,note:'Voltage test; replace ~4-5 years'},
+    {i:'🛞',n:'Tyre Rotation',       t:'A', km:10000,days:180,note:'Even out wear front/rear'},
+    {i:'⚫',n:'Tyres',               t:'R', km:50000,days:1825,note:'Or at 1.6mm tread depth'},
+    {i:'🛞',n:'Wheel Alignment',     t:'I', km:20000,days:365},
+    {i:'❄️',n:'Aircon Service',       t:'I', km:30000,days:730,note:'Regas / cabin cooling check'},
+    {i:'🌧️',n:'Wiper Blades',        t:'R', km:0,    days:365},
+  ]},
+  suv:{label:'SUV / Crossover',icon:'🚙',desc:'Larger, heavier vehicles. CR-V, RAV4, X5, CX-5, Outlander.',source:'General SUV guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',         t:'R', km:10000,days:365,note:'Heavier loads can shorten interval'},
+    {i:'🔧',n:'Oil Filter',          t:'R', km:10000,days:365},
+    {i:'💨',n:'Air Filter',          t:'I', km:15000,days:365},
+    {i:'💨',n:'Air Filter',          t:'R', km:30000,days:730},
+    {i:'🌬️',n:'Cabin Air Filter',    t:'R', km:15000,days:365},
+    {i:'⚡',n:'Spark Plugs',         t:'R', km:60000,days:1460},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'I', km:15000,days:365,note:'Heavier vehicle = faster pad wear'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'R', km:35000,days:1460},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'I', km:20000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'R', km:55000,days:1460},
+    {i:'💧',n:'Brake Fluid',         t:'R', km:40000,days:730},
+    {i:'🌡️',n:'Coolant',             t:'R', km:100000,days:1825},
+    {i:'🧴',n:'Transmission Fluid',  t:'R', km:60000,days:1460},
+    {i:'🧴',n:'Differential / AWD Fluid',t:'R', km:60000,days:1460,note:'AWD/4x4 models — transfer case & diff'},
+    {i:'⏱️',n:'Timing Belt',         t:'R', km:100000,days:2190,note:'Belt-driven engines only'},
+    {i:'🔋',n:'12V Battery',         t:'I', km:0,    days:180},
+    {i:'🛞',n:'Tyre Rotation',       t:'A', km:10000,days:180},
+    {i:'⚫',n:'Tyres',               t:'R', km:50000,days:1825},
+    {i:'🛞',n:'Wheel Alignment',     t:'I', km:20000,days:365},
+    {i:'❄️',n:'Aircon Service',       t:'I', km:30000,days:730},
+    {i:'🌧️',n:'Wiper Blades',        t:'R', km:0,    days:365},
+  ]},
+  hatchback:{label:'Hatchback',icon:'🚘',desc:'Compact city cars. Jazz, Yaris, Swift, Polo, i30.',source:'General compact-car guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',         t:'R', km:10000,days:365,note:'Small engines; 5,000 km for heavy city use'},
+    {i:'🔧',n:'Oil Filter',          t:'R', km:10000,days:365},
+    {i:'💨',n:'Air Filter',          t:'I', km:15000,days:365},
+    {i:'💨',n:'Air Filter',          t:'R', km:30000,days:730},
+    {i:'🌬️',n:'Cabin Air Filter',    t:'R', km:15000,days:365},
+    {i:'⚡',n:'Spark Plugs',         t:'R', km:60000,days:1460},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'I', km:15000,days:365},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'R', km:40000,days:1460},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'I', km:20000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'R', km:60000,days:1460},
+    {i:'💧',n:'Brake Fluid',         t:'R', km:40000,days:730},
+    {i:'🌡️',n:'Coolant',             t:'R', km:100000,days:1825},
+    {i:'🧴',n:'Transmission Fluid',  t:'R', km:60000,days:1460,note:'Includes CVT fluid where fitted'},
+    {i:'🔋',n:'12V Battery',         t:'I', km:0,    days:180},
+    {i:'🛞',n:'Tyre Rotation',       t:'A', km:10000,days:180},
+    {i:'⚫',n:'Tyres',               t:'R', km:45000,days:1825},
+    {i:'🛞',n:'Wheel Alignment',     t:'I', km:20000,days:365},
+    {i:'❄️',n:'Aircon Service',       t:'I', km:30000,days:730},
+    {i:'🌧️',n:'Wiper Blades',        t:'R', km:0,    days:365},
+  ]},
+  mpv:{label:'MPV / People Mover',icon:'🚐',desc:'7-seaters & vans. Alphard, Serena, Carnival, Odyssey.',source:'General MPV guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',         t:'R', km:10000,days:365,note:'Often loaded; consider 7,500 km'},
+    {i:'🔧',n:'Oil Filter',          t:'R', km:10000,days:365},
+    {i:'💨',n:'Air Filter',          t:'I', km:15000,days:365},
+    {i:'💨',n:'Air Filter',          t:'R', km:30000,days:730},
+    {i:'🌬️',n:'Cabin Air Filter',    t:'R', km:15000,days:365,note:'Larger cabin; some have rear filter too'},
+    {i:'⚡',n:'Spark Plugs',         t:'R', km:60000,days:1460},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'I', km:15000,days:365,note:'Heavy when fully seated'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'R', km:35000,days:1460},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'I', km:20000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'R', km:55000,days:1460},
+    {i:'💧',n:'Brake Fluid',         t:'R', km:40000,days:730},
+    {i:'🌡️',n:'Coolant',             t:'R', km:100000,days:1825},
+    {i:'🧴',n:'Transmission Fluid',  t:'R', km:60000,days:1460},
+    {i:'🔋',n:'12V Battery',         t:'I', km:0,    days:180},
+    {i:'🛞',n:'Tyre Rotation',       t:'A', km:10000,days:180},
+    {i:'⚫',n:'Tyres',               t:'R', km:50000,days:1825},
+    {i:'🛞',n:'Wheel Alignment',     t:'I', km:20000,days:365},
+    {i:'❄️',n:'Aircon Service',       t:'I', km:25000,days:730,note:'Rear aircon adds load'},
+    {i:'🌧️',n:'Wiper Blades',        t:'R', km:0,    days:365},
+  ]},
+  hybrid:{label:'Hybrid',icon:'🌱',desc:'Petrol-electric hybrids. Prius, Camry HEV, CR-V Hybrid.',source:'General hybrid guidelines',items:[
+    {i:'🛢️',n:'Engine Oil',         t:'R', km:10000,days:365,note:'Engine runs less; still change yearly'},
+    {i:'🔧',n:'Oil Filter',          t:'R', km:10000,days:365},
+    {i:'💨',n:'Air Filter',          t:'I', km:15000,days:365},
+    {i:'💨',n:'Air Filter',          t:'R', km:30000,days:730},
+    {i:'🌬️',n:'Cabin Air Filter',    t:'R', km:15000,days:365},
+    {i:'⚡',n:'Spark Plugs',         t:'R', km:100000,days:2190,note:'Hybrids often use long-life plugs'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'I', km:20000,days:365,note:'Regen braking extends pad life'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'R', km:60000,days:1825},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'I', km:25000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'R', km:70000,days:1825},
+    {i:'💧',n:'Brake Fluid',         t:'R', km:40000,days:730},
+    {i:'🌡️',n:'Engine Coolant',      t:'R', km:100000,days:1825},
+    {i:'🌡️',n:'Inverter/HV Coolant', t:'R', km:100000,days:1825,note:'Separate hybrid system coolant loop'},
+    {i:'🧴',n:'Transmission Fluid',  t:'R', km:60000,days:1460,note:'eCVT / hybrid transaxle fluid'},
+    {i:'🔋',n:'12V Battery',         t:'I', km:0,    days:180,note:'Auxiliary battery (not the HV pack)'},
+    {i:'🔋',n:'Hybrid Battery Check',t:'I', km:30000,days:730,note:'Health check of the high-voltage pack'},
+    {i:'🛞',n:'Tyre Rotation',       t:'A', km:10000,days:180},
+    {i:'⚫',n:'Tyres',               t:'R', km:50000,days:1825,note:'Low-rolling-resistance tyres'},
+    {i:'🛞',n:'Wheel Alignment',     t:'I', km:20000,days:365},
+    {i:'❄️',n:'Aircon Service',       t:'I', km:30000,days:730},
+    {i:'🌧️',n:'Wiper Blades',        t:'R', km:0,    days:365},
+  ]},
+  ev:{label:'Electric (EV)',icon:'⚡',desc:'Battery electric. Tesla, BYD, Ioniq, Leaf, MG4. No engine oil.',source:'General EV guidelines',items:[
+    {i:'🌬️',n:'Cabin Air Filter',    t:'R', km:15000,days:365,note:'Replace yearly; HEPA on some models'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'I', km:20000,days:365,note:'Regen braking greatly extends pad life'},
+    {i:'🔴',n:'Brake Pads (Front)',  t:'R', km:80000,days:1825},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'I', km:25000,days:365},
+    {i:'🔴',n:'Brake Pads (Rear)',   t:'R', km:90000,days:1825},
+    {i:'💧',n:'Brake Fluid',         t:'R', km:40000,days:730,note:'Still hygroscopic; every 2 years'},
+    {i:'🌡️',n:'Battery/Drive Coolant',t:'R', km:100000,days:1825,note:'Thermal-management coolant for HV battery & motor'},
+    {i:'🧴',n:'Reduction Gear Oil',  t:'R', km:100000,days:2190,note:'Single-speed reducer fluid'},
+    {i:'🔋',n:'12V Battery',         t:'I', km:0,    days:180,note:'Low-voltage accessory battery'},
+    {i:'🔋',n:'HV Battery Health',   t:'I', km:30000,days:730,note:'Check state-of-health / capacity'},
+    {i:'🛞',n:'Tyre Rotation',       t:'A', km:10000,days:180,note:'Instant torque & weight wear tyres faster'},
+    {i:'⚫',n:'Tyres',               t:'R', km:40000,days:1460,note:'EV-rated tyres wear quicker'},
+    {i:'🛞',n:'Wheel Alignment',     t:'I', km:20000,days:365},
+    {i:'❄️',n:'Aircon / Heat Pump',  t:'I', km:30000,days:730,note:'Also conditions cabin & battery'},
+    {i:'🌧️',n:'Wiper Blades',        t:'R', km:0,    days:365},
+  ]},
+};
+
 
 // ─── STATE PERSISTENCE ────────────────────────────────────────────
 // ── App settings (persisted in localStorage alongside theme/currency) ──────────
@@ -1528,7 +1836,7 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.roadTaxExpiry = newDate;
-      await awUpdate('motorcycles', bike.id, { roadTaxExpiry: newDate });
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { roadTaxExpiry: newDate });
     },
   },
   insurance: {
@@ -1560,7 +1868,7 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.insuranceExpiry = newDate;
-      await awUpdate('motorcycles', bike.id, { insuranceExpiry: newDate });
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { insuranceExpiry: newDate });
     },
   },
   inspection: {
@@ -1598,7 +1906,7 @@ const RENEWAL_CFG = {
       const inspDate = document.getElementById('renewal-insp-date')?.value || new Date().toISOString().split('T')[0];
       bike.inspectionDate = inspDate;
       bike.nextInspectionDate = newDate;
-      await awUpdate('motorcycles', bike.id, { inspectionDate: inspDate, nextInspectionDate: newDate });
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { inspectionDate: inspDate, nextInspectionDate: newDate });
     },
   },
   coe: {
@@ -1631,7 +1939,59 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.coeExpiry = newDate;
-      await awUpdate('motorcycles', bike.id, { coeExpiry: newDate });
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { coeExpiry: newDate });
+    },
+  },
+  seasonParking: {
+    title:   '🅿️ Season Parking Renewed',
+    costLabel: 'Season Parking',
+    field:   'seasonParkingExpiry',
+    body: (bike) => `
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+        Current expiry: <strong>${bike.seasonParkingExpiry ? fmtDate(bike.seasonParkingExpiry) : 'Not set'}</strong><br>
+        <span style="font-size:11px;color:var(--text3)">HDB/URA season parking renews monthly. Pick a period.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Renewal Period</label>
+        <select id="renewal-period" class="form-input">
+          <option value="1">1 month</option>
+          <option value="3">3 months</option>
+          <option value="6">6 months</option>
+          <option value="12" selected>12 months</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">New Expiry Date (auto-calculated)</label>
+        <input id="renewal-new-date" type="date" class="form-input" readonly style="opacity:.7"/>
+      </div>`,
+    calc: (bike) => {
+      const base = bike.seasonParkingExpiry ? new Date(bike.seasonParkingExpiry) : new Date();
+      const months = parseInt(document.getElementById('renewal-period')?.value || 12);
+      base.setMonth(base.getMonth() + months);
+      return base.toISOString().split('T')[0];
+    },
+    save: async (bike, newDate) => {
+      bike.seasonParkingExpiry = newDate;
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { seasonParkingExpiry: newDate });
+    },
+  },
+  warranty: {
+    title:   '🛠️ Warranty Updated',
+    costLabel: 'Warranty',
+    field:   'warrantyExpiry',
+    body: (bike) => `
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+        Current warranty expiry: <strong>${bike.warrantyExpiry ? fmtDate(bike.warrantyExpiry) : 'Not set'}</strong><br>
+        <span style="font-size:11px;color:var(--text3)">Enter the manufacturer / extended warranty end date.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Warranty Expiry Date</label>
+        <input id="renewal-new-date" type="date" class="form-input" value="${bike.warrantyExpiry||''}"/>
+      </div>`,
+    calc: (bike) => document.getElementById('renewal-new-date')?.value || '',
+    save: async (bike, newDate) => {
+      bike.warrantyExpiry = newDate;
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { warrantyExpiry: newDate });
     },
   },
 };
@@ -1639,7 +1999,7 @@ const RENEWAL_CFG = {
 function openRenewalModal(bikeId, type) {
   _renewalBikeId = bikeId;
   _renewalType   = type;
-  const bike = APP.bikes.find(b => b.id === bikeId);
+  const bike = findVeh(bikeId);
   const cfg  = RENEWAL_CFG[type];
   if (!bike || !cfg) return;
 
@@ -1678,7 +2038,7 @@ function openRenewalModal(bikeId, type) {
 }
 
 async function saveRenewal() {
-  const bike = APP.bikes.find(b => b.id === _renewalBikeId);
+  const bike = findVeh(_renewalBikeId);
   const cfg  = RENEWAL_CFG[_renewalType];
   if (!bike || !cfg) return;
 
@@ -1721,18 +2081,19 @@ async function saveRenewal() {
 // Create an ownership history record (reused by renewal flows). Cost is
 // optional — a renewal is logged even when no cost is entered.
 async function logOwnershipCost(bike, label, amount, dateStr, notesText) {
+  const kind = kindOf(bike); const C = COLL(kind);
   const rec = {
-    id: uid(), bikeId: bike.id, itemId: null,
+    id: uid(), kind, bikeId: bike.id, itemId: null,
     partLabel: label, partType: 'ownership', recordType: 'ownership',
     km: bike.km || 0, date: dateStr, cost: amount || 0, notes: notesText || '',
     completedAt: new Date().toISOString(), performedTypes: [],
   };
   // Show it immediately in history; persist to the cloud right after.
-  APP.history.push(rec);
+  histArr(kind).push(rec);
   if (isOnline() && AW_SESSION) {
     try {
-      await awCreate('service_records', {
-        motorcycleId: rec.bikeId,
+      await awCreate(C.rec, {
+        [C.fk]: rec.bikeId,
         // Use the record's own id here: `maintenanceItemId` may be a required
         // attribute in the collection, and ownership records have no real
         // maintenance item. A harmless self-reference satisfies the schema.
@@ -1798,7 +2159,7 @@ function uid() {
 function saveState() {
   try {
     const _uid=AW_SESSION?AW_SESSION.userId:'local';
-    localStorage.setItem(STORAGE_KEY+'_'+_uid,JSON.stringify({bikes:APP.bikes,items:APP.items,history:APP.history,nextId:APP.nextId,profile:APP.profile,theme:currentTheme,currency:currentCurrency,settings:APP_SETTINGS}));
+    localStorage.setItem(STORAGE_KEY+'_'+_uid,JSON.stringify({bikes:APP.bikes,items:APP.items,history:APP.history,cars:APP.cars,carItems:APP.carItems,carHistory:APP.carHistory,nextId:APP.nextId,profile:APP.profile,theme:currentTheme,currency:currentCurrency,settings:APP_SETTINGS}));
   } catch(e){console.warn('MotoMaintain: save failed',e);}
 }
 function loadState() {
@@ -1810,6 +2171,9 @@ function loadState() {
     if (Array.isArray(d.bikes))   APP.bikes  =d.bikes;
     if (Array.isArray(d.items))   APP.items  =d.items;
     if (Array.isArray(d.history)) APP.history=d.history;
+    APP.cars       =Array.isArray(d.cars)       ? d.cars       : [];
+    APP.carItems   =Array.isArray(d.carItems)   ? d.carItems   : [];
+    APP.carHistory =Array.isArray(d.carHistory) ? d.carHistory : [];
     if (d.nextId)                 APP.nextId =d.nextId;
     if (d.profile)                APP.profile=d.profile;
     if (d.theme)    {currentTheme   =d.theme;   document.body.setAttribute('data-theme',d.theme);}
@@ -1856,7 +2220,7 @@ function calcStatus(item,currentKm) {
   return 'up_to_date';
 }
 function estimateItemsForBike(bike,typeKey) {
-  const typeDef=BIKE_TYPES[typeKey];
+  const typeDef=typeDefsFor(kindOf(bike))[typeKey];
   if (!typeDef) return [];
   return typeDef.items.map(t=>{
     const kmInt=t.km||0,dayInt=t.days||365;
@@ -1955,12 +2319,12 @@ let _completeSelectedTypes = [];
 
 function openCompleteModal(itemId) {
   _completeItemId=itemId;
-  const item=APP.items.find(i=>i.id===itemId);
-  const bike=item?APP.bikes.find(b=>b.id===item.bikeId):null;
+  const item=findItem(itemId);
+  const bike=item?findVeh(item.bikeId):null;
   if (!item||!bike) return;
   const m=document.getElementById('modal-complete');
   m.querySelector('.complete-part-name').textContent=item.partLabel;
-  m.querySelector('.complete-bike-name').textContent=`${bike.make} ${bike.model} ${bike.year}`;
+  m.querySelector('.complete-bike-name').textContent=`${vehEmoji(bike)} ${bike.make} ${bike.model} ${bike.year}`;
   m.querySelector('.complete-km-input').value=bike.km;
   m.querySelector('.complete-date-input').value=new Date().toISOString().split('T')[0];
   m.querySelector('.complete-cost-input').value='';
@@ -1991,7 +2355,7 @@ function toggleCompleteType(t) {
 
 async function doCompleteService() {
   if (!_completeItemId) return;
-  const item=APP.items.find(i=>i.id===_completeItemId); if (!item) return;
+  const item=findItem(_completeItemId); if (!item) return;
   const m=document.getElementById('modal-complete');
   const km=parseInt(m.querySelector('.complete-km-input').value)||0;
   const date=m.querySelector('.complete-date-input').value;
@@ -1999,7 +2363,8 @@ async function doCompleteService() {
   const notes=m.querySelector('.complete-notes-input').value;
   if (!date) { showToast('⚠️ Please enter the service date'); return; }
   if (km<=0&&item.intervalKm>0) { showToast('⚠️ Please enter the mileage at service'); return; }
-  const bike=APP.bikes.find(b=>b.id===item.bikeId);
+  const bike=findVeh(item.bikeId);
+  const kind=kindOf(bike); const C=COLL(kind);
   const updatedItem={...item,lastKm:km,lastDate:date,
     nextKm:item.intervalKm>0?km+item.intervalKm:null,
     nextDate:(()=>{const d=new Date(date);d.setDate(d.getDate()+item.intervalDays);return d.toISOString().split('T')[0];})(),
@@ -2008,22 +2373,21 @@ async function doCompleteService() {
   // Multi-select types performed in this service
   if (_completeSelectedTypes.length === 0) { showToast('⚠️ Pick at least one service type performed'); return; }
   const performedTypes = _completeSelectedTypes.slice();
-  const newRecord={id:uid(),bikeId:item.bikeId,itemId:item.id,partLabel:item.partLabel,partType:item.partType,recordType:'maintenance',km,date,cost,notes,completedAt:new Date().toISOString(),performedTypes:performedTypes.join(',')};
+  const newRecord={id:uid(),kind,bikeId:item.bikeId,itemId:item.id,partLabel:item.partLabel,partType:item.partType,recordType:'maintenance',km,date,cost,notes,completedAt:new Date().toISOString(),performedTypes:performedTypes.join(',')};
 
   if (isOnline()&&AW_SESSION) {
     const saveBtn=m.querySelector('.btn-primary');
     if (saveBtn){saveBtn.textContent='Saving…';saveBtn.style.pointerEvents='none';}
     try {
       const notesWithTypes = '[TYPES:'+performedTypes.join(',')+'] '+(newRecord.notes||'');
-      await awCreate('service_records',{motorcycleId:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
-      await awUpdate('maintenance_items',updatedItem.id,{
+      await awCreate(C.rec,{[C.fk]:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
+      await awUpdate(C.item,updatedItem.id,{
         lastServiceKm:updatedItem.lastKm, lastServiceDate:updatedItem.lastDate,
         nextDueKm:       updatedItem.nextKm   ?? null,
         nextDueDate:     updatedItem.nextDate  || null,
-        // ▼ PATCH 5
         serviceStatus:   updatedItem.status,
       });
-      if (bike&&km>bike.km) await awUpdate('motorcycles',bike.id,{currentKm:km});
+      if (bike&&km>bike.km) await awUpdate(C.veh,bike.id,{currentKm:km});
     } catch(err) {
       showToast('❌ Could not save to database: '+(err.message||'error'));
       return;
@@ -2033,7 +2397,7 @@ async function doCompleteService() {
   }
   Object.assign(item,updatedItem);
   if (bike&&km>bike.km) bike.km=km;
-  APP.history.push(newRecord);
+  histArr(kind).push(newRecord);
   closeModal('complete'); showToast(`✓ ${item.partLabel} service recorded!`); renderAll();
 }
 
@@ -2042,9 +2406,9 @@ let _odometerBikeId = null;
 
 function openOdometerModal(bikeId) {
   _odometerBikeId=bikeId;
-  const bike=APP.bikes.find(b=>b.id===bikeId); if (!bike) return;
+  const bike=findVeh(bikeId); if (!bike) return;
   const m=document.getElementById('modal-odometer');
-  m.querySelector('.odo-bike-name').textContent=`${bike.make} ${bike.model}`;
+  m.querySelector('.odo-bike-name').textContent=`${vehEmoji(bike)} ${bike.make} ${bike.model}`;
   m.querySelector('.odo-current-km').textContent=bike.km.toLocaleString()+' km';
   m.querySelector('.odo-km-input').value='';
   m.querySelector('.odo-km-input').min=bike.km;
@@ -2054,17 +2418,18 @@ function openOdometerModal(bikeId) {
 
 async function doUpdateOdometer() {
   if (!_odometerBikeId) return;
-  const bike=APP.bikes.find(b=>b.id===_odometerBikeId); if (!bike) return;
+  const bike=findVeh(_odometerBikeId); if (!bike) return;
   const m=document.getElementById('modal-odometer');
   const newKm=parseInt(m.querySelector('.odo-km-input').value);
   if (isNaN(newKm)) { showToast('⚠️ Enter a valid km number'); return; }
   if (newKm<=bike.km) { showToast('⚠️ New km must be higher than current ('+bike.km.toLocaleString()+' km)'); return; }
+  const C=COLL(kindOf(bike));
   if (isOnline()&&AW_SESSION) {
-    try { await awUpdate('motorcycles',bike.id,{currentKm:newKm}); }
+    try { await awUpdate(C.veh,bike.id,{currentKm:newKm}); }
     catch(err) { showToast('❌ Could not update odometer: '+(err.message||'error')); return; }
   }
   bike.km=newKm;
-  APP.items.filter(i=>i.bikeId===bike.id).forEach(i=>{i.status=calcStatus(i,newKm);});
+  itemsOf(bike.id).forEach(i=>{i.status=calcStatus(i,newKm);});
   closeModal('odometer'); showToast(`⚡ Odometer updated to ${newKm.toLocaleString()} km`); renderAll();
 }
 
@@ -2074,9 +2439,9 @@ let _ownershipBikeId = null;
 
 function openOwnershipEdit(bikeId) {
   _ownershipBikeId = bikeId;
-  const bike = APP.bikes.find(b => b.id === bikeId);
+  const bike = findVeh(bikeId);
   if (!bike) return;
-  document.getElementById('ownership-bike-name').textContent = bike.make + ' ' + bike.model + ' ' + bike.year;
+  document.getElementById('ownership-bike-name').textContent = vehEmoji(bike) + ' ' + bike.make + ' ' + bike.model + ' ' + bike.year;
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   setVal('ow-reg-date', bike.registrationDate);
   setVal('ow-roadtax',  bike.roadTaxExpiry);
@@ -2086,6 +2451,19 @@ function openOwnershipEdit(bikeId) {
   setVal('ow-coe',      bike.coeExpiry);
   setVal('ow-insp',     bike.inspectionDate);
   setVal('ow-next-insp',bike.nextInspectionDate);
+  // Car-only ownership fields
+  const carExtra = document.getElementById('ow-car-extra');
+  if (carExtra) carExtra.style.display = kindOf(bike) === 'car' ? '' : 'none';
+  if (kindOf(bike) === 'car') {
+    setVal('ow-reg-num',    bike.registrationNumber);
+    setVal('ow-iu',         bike.iuNumber);
+    setVal('ow-fuel',       bike.fuelType);
+    setVal('ow-transmission', bike.transmission);
+    setVal('ow-engine-cc',  bike.engineCapacity);
+    setVal('ow-coe-cat',    bike.coeCategory);
+    setVal('ow-season',     bike.seasonParkingExpiry);
+    setVal('ow-warranty',   bike.warrantyExpiry);
+  }
   // Wire last inspection change to auto-calc next
   document.getElementById('ow-insp').onchange = function() {
     const regDate = document.getElementById('ow-reg-date').value || (bike.year + '-01-01');
@@ -2096,8 +2474,9 @@ function openOwnershipEdit(bikeId) {
 }
 
 async function saveOwnershipDetails() {
-  const bike = APP.bikes.find(b => b.id === _ownershipBikeId);
+  const bike = findVeh(_ownershipBikeId);
   if (!bike) return;
+  const isCar = kindOf(bike) === 'car';
   const getVal = id => document.getElementById(id)?.value?.trim() || '';
   const regDate  = getVal('ow-reg-date');
   const lastInsp = getVal('ow-insp');
@@ -2112,12 +2491,22 @@ async function saveOwnershipDetails() {
     insurancePolicyNo: getVal('ow-policy'),
     coeExpiry:         getVal('ow-coe'),
   };
+  if (isCar) Object.assign(updates, {
+    registrationNumber: getVal('ow-reg-num'),
+    iuNumber:           getVal('ow-iu'),
+    fuelType:           getVal('ow-fuel'),
+    transmission:       getVal('ow-transmission'),
+    engineCapacity:     getVal('ow-engine-cc'),
+    coeCategory:        getVal('ow-coe-cat'),
+    seasonParkingExpiry:getVal('ow-season'),
+    warrantyExpiry:     getVal('ow-warranty'),
+  });
   // Save to Appwrite
   if (isOnline() && AW_SESSION) {
     const btn = document.querySelector('#modal-ownership .btn-primary');
     if (btn) { btn.textContent = 'Saving…'; btn.style.pointerEvents = 'none'; }
     try {
-      await awUpdate('motorcycles', bike.id, {
+      const payload = {
         registrationDate:  updates.registrationDate  || null,
         inspectionDate:    updates.inspectionDate    || null,
         nextInspectionDate:updates.nextInspectionDate|| null,
@@ -2126,7 +2515,18 @@ async function saveOwnershipDetails() {
         insuranceProvider: updates.insuranceProvider || null,
         insurancePolicyNo: updates.insurancePolicyNo || null,
         coeExpiry:         updates.coeExpiry         || null,
+      };
+      if (isCar) Object.assign(payload, {
+        registrationNumber: updates.registrationNumber || null,
+        iuNumber:           updates.iuNumber || null,
+        fuelType:           updates.fuelType || null,
+        transmission:       updates.transmission || null,
+        engineCapacity:     updates.engineCapacity || null,
+        coeCategory:        updates.coeCategory || null,
+        seasonParkingExpiry:updates.seasonParkingExpiry || null,
+        warrantyExpiry:     updates.warrantyExpiry || null,
       });
+      await awUpdate(COLL(kindOf(bike)).veh, bike.id, payload);
     } catch(err) {
       showToast('❌ Could not save: ' + (err.message || 'error'));
       return;
@@ -2178,15 +2578,16 @@ function bikeDetailTab(tab, el) {
 function openBikeDetail(bikeId) { renderBikeDetail(bikeId); nav('motodetail',null); setActiveNav('bikes'); }
 
 function renderBikeDetail(bikeId) {
-  const bike=APP.bikes.find(b=>b.id===bikeId);
-  const items=APP.items.filter(i=>i.bikeId===bikeId);
+  const bike=findVeh(bikeId);
+  const items=itemsOf(bikeId);
   if (!bike) return;
   const ov=items.filter(i=>i.status==='overdue').length;
   const so=items.filter(i=>i.status==='due_soon').length;
   const ok=items.filter(i=>i.status==='up_to_date').length;
   const grouped=['overdue','due_soon','up_to_date','never_serviced'].map(st=>({st,items:items.filter(i=>i.status===st)})).filter(g=>g.items.length);
   const sLabels={overdue:'🔴 Overdue',due_soon:'🟡 Due Soon',up_to_date:'🟢 Up to Date',never_serviced:'⚫ Never Serviced'};
-  const history=APP.history.filter(h=>h.bikeId===bikeId).slice(-5).reverse();
+  const history=VHIST().filter(h=>h.bikeId===bikeId).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  const isCar=kindOf(bike)==='car';
   document.getElementById('detail-content').innerHTML=`
     <div class="page-header">
       <div style="display:flex;align-items:center;gap:12px">
@@ -2201,20 +2602,27 @@ function renderBikeDetail(bikeId) {
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
-      <button class="tab active" onclick="bikeDetailTab('info',this)">🏍️ Info</button>
+      <button class="tab active" onclick="bikeDetailTab('info',this)">${vehEmoji(bike)} Info</button>
       <button class="tab" onclick="bikeDetailTab('ownership',this)">📋 Ownership</button>
     </div>
     <div id="bdt-info">
     <div class="detail-split">
       <div>
         <div class="card" style="padding:20px;margin-bottom:16px">
-          <div class="section-hd">Bike Info</div>
+          <div class="section-hd">${isCar?'Car':'Bike'} Info</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Odometer</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--brand)">${bike.km.toLocaleString()} km</div></div>
             <div style="background:var(--s3);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Type</div>
-            <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text)">${BIKE_TYPES[bike.bikeType]?.label||bike.bikeType}</div></div>
+            <div style="font-family:'Exo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text)">${typeLabelOf(bike)}</div></div>
           </div>
+          ${isCar?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            ${bike.registrationNumber?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Plate</div><div style="font-size:13px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace">${bike.registrationNumber}</div></div>`:''}
+            ${bike.fuelType?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Fuel</div><div style="font-size:13px;font-weight:500;color:var(--text);text-transform:capitalize">${bike.fuelType}</div></div>`:''}
+            ${bike.transmission?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Transmission</div><div style="font-size:13px;font-weight:500;color:var(--text);text-transform:capitalize">${bike.transmission}</div></div>`:''}
+            ${bike.engineCapacity?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Engine</div><div style="font-size:13px;font-weight:500;color:var(--text)">${bike.engineCapacity}</div></div>`:''}
+            ${bike.iuNumber?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">IU Number</div><div style="font-size:13px;font-weight:500;color:var(--text);font-family:'JetBrains Mono',monospace">${bike.iuNumber}</div></div>`:''}
+          </div>`:''}
           <div style="display:flex;gap:8px;margin-top:14px">
             <div style="flex:1;background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--red)">${ov}</div><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase">Overdue</div></div>
             <div style="flex:1;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Exo 2',sans-serif;font-size:20px;font-weight:800;color:var(--amber)">${so}</div><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase">Due Soon</div></div>
@@ -2273,6 +2681,14 @@ function renderBikeDetail(bikeId) {
           <div style="flex:1">${docStatusBadge(bike.coeExpiry,'📄 COE', 180)}</div>
           <button class="btn btn-secondary btn-sm" style="align-self:center;white-space:nowrap" onclick="openRenewalModal('${bike.id}','coe')">Renewed</button>
         </div>
+        ${isCar?`<div style="display:flex;align-items:stretch;gap:8px;margin-bottom:8px">
+          <div style="flex:1">${docStatusBadge(bike.seasonParkingExpiry,'🅿️ Season Parking', APP_SETTINGS.ownershipReminderDays)}</div>
+          <button class="btn btn-secondary btn-sm" style="align-self:center;white-space:nowrap" onclick="openRenewalModal('${bike.id}','seasonParking')">Renewed</button>
+        </div>
+        <div style="display:flex;align-items:stretch;gap:8px;margin-bottom:8px">
+          <div style="flex:1">${docStatusBadge(bike.warrantyExpiry,'🛠️ Warranty', APP_SETTINGS.ownershipReminderDays)}</div>
+          <button class="btn btn-secondary btn-sm" style="align-self:center;white-space:nowrap" onclick="openRenewalModal('${bike.id}','warranty')">Update</button>
+        </div>`:''}
         <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
           ${bike.registrationDate?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Registered</div><div style="font-size:13px;font-weight:500;color:var(--text)">${fmtDate(bike.registrationDate)}</div></div>`:''}
           ${bike.inspectionDate?`<div style="background:var(--s3);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);font-family:'Exo 2',sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Last Inspection</div><div style="font-size:13px;font-weight:500;color:var(--text)">${fmtDate(bike.inspectionDate)}</div></div>`:''}
@@ -2284,27 +2700,43 @@ function renderBikeDetail(bikeId) {
 `;
 }
 
-// ─── RENDER BIKES ─────────────────────────────────────────────────
+// ─── RENDER VEHICLES (motorcycles + cars) ─────────────────────────
+let _vehFilter = 'all';
+function filterVehicles(f) {
+  _vehFilter = f;
+  document.querySelectorAll('.veh-filter-pill').forEach(b => {
+    const on = b.dataset.f === f;
+    b.classList.toggle('btn-primary', on);
+    b.classList.toggle('btn-secondary', !on);
+  });
+  renderBikes();
+}
 function renderBikes() {
   const grid=document.getElementById('bike-grid');
   const subEl=document.getElementById('bikes-sub');
-  if (subEl) subEl.textContent=APP.bikes.length+' bike'+(APP.bikes.length!==1?'s':'')+' registered';
+  const bikesN=APP.bikes.length, carsN=APP.cars.length;
+  if (subEl) subEl.textContent=`${bikesN} motorcycle${bikesN!==1?'s':''} · ${carsN} car${carsN!==1?'s':''}`;
   if (!grid) return;
-  if (APP.bikes.length===0) {
-    grid.innerHTML=`<div class="card" style="padding:40px;text-align:center;grid-column:1/-1"><div style="font-size:48px;margin-bottom:12px">🏍️</div><h3 style="margin-bottom:8px">No motorcycles yet</h3><p style="color:var(--text3);font-size:13px;margin-bottom:16px">Add your first motorcycle to start tracking</p><button class="btn btn-primary" style="margin:0 auto" onclick="openModal('addBike')">＋ Add Motorcycle</button></div>`;
+  if (bikesN===0 && carsN===0) {
+    grid.innerHTML=`<div class="card" style="padding:40px;text-align:center;grid-column:1/-1"><div style="font-size:48px;margin-bottom:12px">🏍️🚗</div><h3 style="margin-bottom:8px">No vehicles yet</h3><p style="color:var(--text3);font-size:13px;margin-bottom:16px">Add your first motorcycle or car to start tracking</p><button class="btn btn-primary" style="margin:0 auto" onclick="openModal('addVehicle')">＋ Add Vehicle</button></div>`;
     return;
   }
-  grid.innerHTML=APP.bikes.map(bike=>{
-    const items=APP.items.filter(i=>i.bikeId===bike.id);
+  let list = _vehFilter==='moto' ? APP.bikes : _vehFilter==='car' ? APP.cars : VEH();
+  if (list.length===0) {
+    grid.innerHTML=`<div class="card" style="padding:36px;text-align:center;grid-column:1/-1;color:var(--text3)">No ${_vehFilter==='car'?'cars':'motorcycles'} yet. <button class="btn btn-primary btn-sm" style="margin-left:8px" onclick="openModal('${_vehFilter==='car'?'addCar':'addBike'}')">＋ Add ${_vehFilter==='car'?'Car':'Motorcycle'}</button></div>`;
+    return;
+  }
+  grid.innerHTML=list.map(bike=>{
+    const items=itemsOf(bike.id);
     const ov=items.filter(i=>i.status==='overdue').length;
     const so=items.filter(i=>i.status==='due_soon').length;
     const ok=items.filter(i=>i.status==='up_to_date').length;
     return `<div class="bike-card" onclick="openBikeDetail('${bike.id}')">
       <div class="bike-top"></div>
       <div class="bike-body">
-        <div class="bike-name">${bike.make} ${bike.model}</div>
+        <div class="bike-name">${vehEmoji(bike)} ${bike.make} ${bike.model}</div>
         <div class="bike-year">${bike.year}${bike.color?' · '+bike.color:''}${bike.nickname?' · "'+bike.nickname+'"':''}</div>
-        <div class="bike-km"><span style="font-size:18px">🏍️</span><span class="bike-km-val">${bike.km.toLocaleString()} km</span></div>
+        <div class="bike-km"><span style="font-size:18px">${vehEmoji(bike)}</span><span class="bike-km-val">${bike.km.toLocaleString()} km</span></div>
         <div class="bike-stats">
           <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--red)">${ov}</div><div class="bike-stat-lbl">Overdue</div></div>
           <div class="bike-stat-pill"><div class="bike-stat-num" style="color:var(--amber)">${so}</div><div class="bike-stat-lbl">Soon</div></div>
@@ -2314,7 +2746,7 @@ function renderBikes() {
       <div class="bike-actions">
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="event.stopPropagation();openOdometerModal('${bike.id}')">⚡ Update km</button>
         <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();nav('maintenance',null);setActiveNav('maintenance');renderMaintenance('${bike.id}')">🔧 Service</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deleteBike('${bike.id}')" title="Delete bike">🗑</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deleteBike('${bike.id}')" title="Delete vehicle">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -2322,11 +2754,12 @@ function renderBikes() {
 
 // ─── RENDER DASHBOARD ─────────────────────────────────────────────
 function renderDashboard() {
-  const overdue=APP.items.filter(i=>i.status==='overdue');
-  const soon   =APP.items.filter(i=>i.status==='due_soon');
-  const ok     =APP.items.filter(i=>i.status==='up_to_date');
-  const nv     =APP.items.filter(i=>i.status==='never_serviced');
-  const totalKm=APP.bikes.reduce((s,b)=>s+(b.km||0),0);
+  const allItems=VITEMS(); const allVeh=VEH();
+  const overdue=allItems.filter(i=>i.status==='overdue');
+  const soon   =allItems.filter(i=>i.status==='due_soon');
+  const ok     =allItems.filter(i=>i.status==='up_to_date');
+  const nv     =allItems.filter(i=>i.status==='never_serviced');
+  const totalKm=allVeh.reduce((s,b)=>s+(b.km||0),0);
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   set('dash-overdue',overdue.length); set('dash-soon',soon.length);
   set('dash-ok',ok.length); set('dash-km',totalKm.toLocaleString());
@@ -2337,15 +2770,15 @@ function renderDashboard() {
   const charts =document.getElementById('dash-charts-row');
   const ovHdr  =document.getElementById('dash-overdue-hdr');
   const soHdr  =document.getElementById('dash-soon-hdr');
-  if (APP.bikes.length===0) {
+  if (allVeh.length===0) {
     if(noBikes) noBikes.style.display=''; if(charts) charts.style.display='none';
     if(ovHdr) ovHdr.style.display='none'; if(soHdr) soHdr.style.display='none'; return;
   }
   if(noBikes) noBikes.style.display='none'; if(charts) charts.style.display='';
   const chartEl=document.getElementById('chart-bars');
   if (chartEl) {
-    chartEl.innerHTML=APP.bikes.map(bike=>{
-      const bi=APP.items.filter(i=>i.bikeId===bike.id);
+    chartEl.innerHTML=allVeh.map(bike=>{
+      const bi=itemsOf(bike.id);
       const bOv=bi.filter(i=>i.status==='overdue').length;
       const bSo=bi.filter(i=>i.status==='due_soon').length;
       const bOk=bi.filter(i=>i.status!=='overdue'&&i.status!=='due_soon').length;
@@ -2355,12 +2788,12 @@ function renderDashboard() {
         ${bOv>0?`<div class="bar" style="height:${h(bOv)}px;background:var(--red)"></div>`:''}
         ${bSo>0?`<div class="bar" style="height:${h(bSo)}px;background:var(--amber)"></div>`:''}
         ${bOk>0?`<div class="bar" style="height:${h(bOk)}px;background:var(--green)"></div>`:''}
-      </div><div class="chart-label">${bike.make}<br>${bike.model}</div></div>`;
+      </div><div class="chart-label">${vehEmoji(bike)} ${bike.make}<br>${bike.model}</div></div>`;
     }).join('');
   }
   const donutEl=document.getElementById('dash-donut');
   if (donutEl) {
-    const all=APP.items.length||1;
+    const all=allItems.length||1;
     const segs=[[overdue.length/all,'var(--red)'],[soon.length/all,'var(--amber)'],[ok.length/all,'var(--green)'],[nv.length/all,'var(--s5)']];
     let off=0; let paths='<circle cx="45" cy="45" r="30" fill="var(--s3)"/>';
     segs.forEach(([pct,color])=>{
@@ -2381,21 +2814,25 @@ function renderDashboard() {
     .map(([c,l])=>`<div class="legend-row"><div class="legend-dot" style="background:${c}"></div><span>${l}</span></div>`).join('');
   if(ovHdr) ovHdr.style.display=overdue.length?'':'none';
   const ovList=document.getElementById('dash-overdue-list');
-  if(ovList) ovList.innerHTML=overdue.map(item=>{const bike=APP.bikes.find(b=>b.id===item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}</div><div class="svc-meta">${bike?bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Fix Now</button></div>`;}).join('');
+  if(ovList) ovList.innerHTML=overdue.map(item=>{const bike=findVeh(item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}</div><div class="svc-meta">${bike?bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Fix Now</button></div>`;}).join('');
   if(soHdr) soHdr.style.display=soon.length?'':'none';
   const soList=document.getElementById('dash-soon-list');
-  if(soList) soList.innerHTML=soon.map(item=>{const bike=APP.bikes.find(b=>b.id===item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}</div><div class="svc-meta">${bike?bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div></div>`;}).join('');
+  if(soList) soList.innerHTML=soon.map(item=>{const bike=findVeh(item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}</div><div class="svc-meta">${bike?bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div></div>`;}).join('');
 
   // ── Ownership document reminders on dashboard ────────────────────────────
   const owDocs = [];
   const rd = APP_SETTINGS.ownershipReminderDays || 30;
-  APP.bikes.forEach(bike => {
+  allVeh.forEach(bike => {
     const checks = [
       { type:'roadTax',    label:'Road Tax',       date:bike.roadTaxExpiry,      days:rd  },
       { type:'insurance',  label:'Insurance',      date:bike.insuranceExpiry,    days:rd  },
       { type:'inspection', label:'Inspection Due', date:bike.nextInspectionDate, days:rd  },
       { type:'coe',        label:'COE',            date:bike.coeExpiry,          days:180 },
     ];
+    if (kindOf(bike)==='car') {
+      checks.push({ type:'seasonParking', label:'Season Parking', date:bike.seasonParkingExpiry, days:rd });
+      checks.push({ type:'warranty',      label:'Warranty',       date:bike.warrantyExpiry,      days:rd });
+    }
     checks.forEach(c => {
       if (!c.date) return;
       const daysLeft = Math.ceil((new Date(c.date) - Date.now()) / 86400000);
@@ -2414,7 +2851,7 @@ function renderDashboard() {
     return `<div class="service-row">
       <span class="svc-icon">📋</span>
       <div style="flex:1"><div class="svc-name">${d.label}</div>
-      <div class="svc-meta">${d.bike.make} ${d.bike.model} · Due ${fmtDate(d.date)}</div></div>
+      <div class="svc-meta">${vehEmoji(d.bike)} ${d.bike.make} ${d.bike.model} · Due ${fmtDate(d.date)}</div></div>
       <span style="font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;color:${color};background:${color}22;border:1px solid ${color}44;padding:3px 8px;border-radius:999px;margin-right:8px">${txt}</span>
       <button class="btn btn-primary btn-sm" onclick="openRenewalModal('${d.bike.id}','${d.type}')">Renewed</button>
     </div>`;
@@ -2432,13 +2869,13 @@ function renderMaintenance(bikeId) {
   const titleEl=document.getElementById('maint-title');
   const subEl  =document.getElementById('maint-sub');
   if (!listEl) return;
-  if (APP.bikes.length===0) { listEl.innerHTML=`<div class="card" style="padding:40px;text-align:center"><div style="font-size:40px;margin-bottom:12px">🏍️</div><p style="color:var(--text3)">Add a motorcycle first to see maintenance items.</p></div>`; return; }
-  const bikesToShow=_maintBikeId?APP.bikes.filter(b=>b.id===_maintBikeId):APP.bikes;
+  if (VEH().length===0) { listEl.innerHTML=`<div class="card" style="padding:40px;text-align:center"><div style="font-size:40px;margin-bottom:12px">🏍️🚗</div><p style="color:var(--text3)">Add a vehicle first to see maintenance items.</p></div>`; return; }
+  const bikesToShow=_maintBikeId?VEH().filter(b=>b.id===_maintBikeId):VEH();
   let html='';
   bikesToShow.forEach(bike=>{
-    if(titleEl&&_maintBikeId) titleEl.textContent=bike.make+' '+bike.model+' — Maintenance';
+    if(titleEl&&_maintBikeId) titleEl.textContent=vehEmoji(bike)+' '+bike.make+' '+bike.model+' — Maintenance';
     if(subEl&&_maintBikeId)   subEl.textContent=fmtKm(bike.km)+' · '+bike.year;
-    let items=APP.items.filter(i=>i.bikeId===bike.id);
+    let items=itemsOf(bike.id);
     if (_maintFilter!=='all') items=items.filter(i=>{
       if(_maintFilter==='overdue') return i.status==='overdue';
       if(_maintFilter==='soon')    return i.status==='due_soon';
@@ -2447,7 +2884,7 @@ function renderMaintenance(bikeId) {
     });
     if (_maintSearch) items=items.filter(i=>i.partLabel.toLowerCase().includes(_maintSearch.toLowerCase()));
     items.sort((a,b)=>(STATUS_CFG[a.status]?.order??9)-(STATUS_CFG[b.status]?.order??9));
-    if (!_maintBikeId) html+=`<div class="section-hd">${bike.make} ${bike.model} — ${bike.km.toLocaleString()} km</div>`;
+    if (!_maintBikeId) html+=`<div class="section-hd">${vehEmoji(bike)} ${bike.make} ${bike.model} — ${bike.km.toLocaleString()} km</div>`;
     if (items.length===0){html+=`<div class="card" style="padding:20px;text-align:center;color:var(--text3);margin-bottom:16px">No items match filter.</div>`;return;}
     html+=`<div class="card" style="margin-bottom:16px">${items.map(item=>`
       <div class="service-row maint-item" data-status="${item.status}">
@@ -2487,57 +2924,62 @@ function renderHistory() {
   if (!listEl) return;
   if (filterEl) {
     const cur=filterEl.value;
-    filterEl.innerHTML='<option value="all">All bikes</option>'+APP.bikes.map(b=>`<option value="${b.id}">${b.make} ${b.model}</option>`).join('');
-    filterEl.value=APP.bikes.find(b=>b.id===cur)?cur:'all';
+    filterEl.innerHTML='<option value="all">All vehicles</option>'+VEH().map(b=>`<option value="${b.id}">${vehEmoji(b)} ${b.make} ${b.model}</option>`).join('');
+    filterEl.value=findVeh(cur)?cur:'all';
   }
   const filterBike=filterEl?filterEl.value:'all';
   const typeEl=document.getElementById('hist-type-filter');
   const filterType=typeEl?typeEl.value:'all';
+  const kindEl=document.getElementById('hist-kind-filter');
+  const filterKind=kindEl?kindEl.value:'all';
   const recType=h=>h.recordType||(h.partType==='ownership'?'ownership':'maintenance');
-  const records=APP.history.filter(h=>(filterBike==='all'||h.bikeId===filterBike)&&(filterType==='all'||recType(h)===filterType)).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const records=VHIST().filter(h=>(filterBike==='all'||h.bikeId===filterBike)&&(filterType==='all'||recType(h)===filterType)&&(filterKind==='all'||kindOf(findVeh(h.bikeId))===filterKind)).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
   const totalCost=records.reduce((s,r)=>s+(r.cost||0),0);
   if(countEl) countEl.textContent=records.length;
   if(spendEl) spendEl.innerHTML=`<span class="currency-display">${getCurrency()}</span> ${totalCost.toFixed(2)}`;
   if (records.length===0){listEl.innerHTML=`<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">📋</div><p style="color:var(--text3)">No service records yet. Mark maintenance items as done to start tracking history.</p></div>`;return;}
-  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);const isOwn=recType(h)==='ownership';const badges=isOwn?`<span title="Ownership document update" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:var(--cyan)25;color:var(--cyan);font-family:'Exo 2',sans-serif;font-size:10px;font-weight:800;border:1px solid var(--cyan)44">📋 Ownership</span>`:(()=>{const types=(h.performedTypes&&h.performedTypes.length)?h.performedTypes:(()=>{const it=APP.items.find(i=>i.id===h.itemId);return it?[it.serviceType||'I']:['I'];})();return types.map(t=>serviceTypeBadge(t)).join(' ');})();return `<div class="tl-item"><div class="tl-dot" style="background:${isOwn?'var(--cyan)':'var(--brand)'}"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${badges}<span class="tl-part">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details">${isOwn?'':`<span>📍 ${fmtKm(h.km)}</span>`}${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
+  listEl.innerHTML=`<div class="timeline">${records.map(h=>{const bike=findVeh(h.bikeId);const isOwn=recType(h)==='ownership';const badges=isOwn?`<span title="Ownership document update" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:var(--cyan)25;color:var(--cyan);font-family:'Exo 2',sans-serif;font-size:10px;font-weight:800;border:1px solid var(--cyan)44">📋 Ownership</span>`:(()=>{const types=(h.performedTypes&&h.performedTypes.length)?h.performedTypes:(()=>{const it=findItem(h.itemId);return it?[it.serviceType||'I']:['I'];})();return types.map(t=>serviceTypeBadge(t)).join(' ');})();return `<div class="tl-item"><div class="tl-dot" style="background:${isOwn?'var(--cyan)':'var(--brand)'}"></div><div class="tl-card"><div class="tl-top"><span style="font-size:16px">${icon(h.partType)}</span>${badges}<span class="tl-part">${h.partLabel}${bike?' — '+vehEmoji(bike)+' '+bike.make+' '+bike.model:''}</span><span class="tl-date">${fmtDate(h.date)}</span><button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:8px;color:var(--red);flex-shrink:0" onclick="deleteServiceRecord('${h.id}')" title="Delete record">🗑</button></div><div class="tl-details">${isOwn?'':`<span>📍 ${fmtKm(h.km)}</span>`}${h.cost>0?`<span>💰 ${getCurrency()} ${h.cost.toFixed(2)}</span>`:''} ${h.notes?`<span>📝 ${h.notes}</span>`:''}</div></div></div>`;}).join('')}</div>`;
 }
 
 async function deleteServiceRecord(recordId) {
   if (!confirm('Delete this service record?')) return;
-  if (isOnline()&&AW_SESSION) { try{await awDelete('service_records',recordId);}catch(err){showToast('❌ Could not delete record: '+(err.message||'error'));return;} }
-  APP.history=APP.history.filter(h=>h.id!==recordId);
+  const rec=VHIST().find(h=>h.id===recordId);
+  const kind=rec?kindOf(rec):'moto'; const C=COLL(kind);
+  if (isOnline()&&AW_SESSION) { try{await awDelete(C.rec,recordId);}catch(err){showToast('❌ Could not delete record: '+(err.message||'error'));return;} }
+  if (kind==='car') APP.carHistory=APP.carHistory.filter(h=>h.id!==recordId);
+  else APP.history=APP.history.filter(h=>h.id!==recordId);
   renderHistory(); renderOverview(); renderDashboard(); showToast('🗑 Service record deleted');
 }
 
 // ─── RENDER OVERVIEW ──────────────────────────────────────────────
 function renderOverview() {
   const ovEl=document.getElementById('ov-summary'); if(!ovEl) return;
-  const overdue=APP.items.filter(i=>i.status==='overdue');
-  const soon   =APP.items.filter(i=>i.status==='due_soon');
-  const ok     =APP.items.filter(i=>i.status==='up_to_date');
-  const totalCost=APP.history.reduce((s,h)=>s+(h.cost||0),0);
-  const recent=APP.history.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  const overdue=VITEMS().filter(i=>i.status==='overdue');
+  const soon   =VITEMS().filter(i=>i.status==='due_soon');
+  const ok     =VITEMS().filter(i=>i.status==='up_to_date');
+  const totalCost=VHIST().reduce((s,h)=>s+(h.cost||0),0);
+  const recent=VHIST().slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
   ovEl.innerHTML=`
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-icon" style="background:var(--glow)">🏍️</div><div class="stat-label">My Bikes</div><div class="stat-val" style="color:var(--brand)">${APP.bikes.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--glow)">🚗</div><div class="stat-label">My Vehicles</div><div class="stat-val" style="color:var(--brand)">${VEH().length}</div></div>
       <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg)">⚠️</div><div class="stat-label">Overdue</div><div class="stat-val" style="color:var(--red)">${overdue.length}</div></div>
       <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🕐</div><div class="stat-label">Due Soon</div><div class="stat-val" style="color:var(--amber)">${soon.length}</div></div>
       <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">✅</div><div class="stat-label">Up to Date</div><div class="stat-val" style="color:var(--green)">${ok.length}</div></div>
     </div>
     <div class="section-hd">Recent Services</div>
     ${recent.length===0?'<div class="card" style="padding:24px;text-align:center;color:var(--text3)">No services recorded yet.</div>':
-      `<div class="card">${recent.map(h=>{const bike=APP.bikes.find(b=>b.id===h.bikeId);return `<div class="service-row" style="cursor:default"><span class="svc-icon">${icon(h.partType)}</span><div style="flex:1"><div class="svc-name">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div><div class="svc-meta">${fmtDate(h.date)}</div></div><span class="badge badge-ok">Completed</span><div class="svc-right"><div class="km-val">${fmtKm(h.km)}${h.cost>0?' · '+getCurrency()+' '+h.cost.toFixed(2):''}</div></div></div>`;}).join('')}</div>`}`;
+      `<div class="card">${recent.map(h=>{const bike=findVeh(h.bikeId);return `<div class="service-row" style="cursor:default"><span class="svc-icon">${icon(h.partType)}</span><div style="flex:1"><div class="svc-name">${h.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div><div class="svc-meta">${fmtDate(h.date)}</div></div><span class="badge badge-ok">Completed</span><div class="svc-right"><div class="km-val">${fmtKm(h.km)}${h.cost>0?' · '+getCurrency()+' '+h.cost.toFixed(2):''}</div></div></div>`;}).join('')}</div>`}`;
   const dueEl=document.getElementById('ov-due');
   if(dueEl) dueEl.innerHTML=overdue.length===0&&soon.length===0?`<div class="card" style="padding:40px;text-align:center"><div style="font-size:36px;margin-bottom:12px">✅</div><p style="color:var(--text3)">No services currently due!</p></div>`:
-    (overdue.length?`<div class="section-hd" style="color:var(--red)">⚠ Overdue (${overdue.length})</div><div class="card" style="margin-bottom:16px">${overdue.map(item=>{const bike=APP.bikes.find(b=>b.id===item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Mark Done</button></div>`;}).join('')}</div>`:'')+
-    (soon.length?`<div class="section-hd" style="color:var(--amber)">🕐 Due Soon (${soon.length})</div><div class="card">${soon.map(item=>{const bike=APP.bikes.find(b=>b.id===item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Mark Done</button></div>`;}).join('')}</div>`:'');
+    (overdue.length?`<div class="section-hd" style="color:var(--red)">⚠ Overdue (${overdue.length})</div><div class="card" style="margin-bottom:16px">${overdue.map(item=>{const bike=findVeh(item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Mark Done</button></div>`;}).join('')}</div>`:'')+
+    (soon.length?`<div class="section-hd" style="color:var(--amber)">🕐 Due Soon (${soon.length})</div><div class="card">${soon.map(item=>{const bike=findVeh(item.bikeId);return `<div class="service-row" onclick="openCompleteModal('${item.id}')"><span class="svc-icon">${icon(item.partType)}</span><div style="flex:1"><div class="svc-name">${item.partLabel}${bike?' — '+bike.make+' '+bike.model:''}</div></div>${badge(item.status)}<div class="svc-right"><div class="km-val">${item.nextKm?'@ '+fmtKm(item.nextKm):fmtDate(item.nextDate)}</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCompleteModal('${item.id}')">Mark Done</button></div>`;}).join('')}</div>`:'');
   const anaEl=document.getElementById('ov-analytics');
   if(anaEl) {
     const partCounts={};
-    APP.history.forEach(h=>{partCounts[h.partLabel]=(partCounts[h.partLabel]||0)+1;});
+    VHIST().forEach(h=>{partCounts[h.partLabel]=(partCounts[h.partLabel]||0)+1;});
     const topParts=Object.entries(partCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const maxCount=topParts[0]?.[1]||1;
-    anaEl.innerHTML=`<div class="grid2" style="margin-bottom:20px"><div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-val">${APP.history.length}</div></div><div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-val" style="color:var(--brand)">${getCurrency()} ${totalCost.toFixed(2)}</div></div></div><div class="section-hd">Top Serviced Parts</div>
+    anaEl.innerHTML=`<div class="grid2" style="margin-bottom:20px"><div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-val">${VHIST().length}</div></div><div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-val" style="color:var(--brand)">${getCurrency()} ${totalCost.toFixed(2)}</div></div></div><div class="section-hd">Top Serviced Parts</div>
     ${topParts.length===0?'<div class="card" style="padding:20px;text-align:center;color:var(--text3)">No history yet.</div>':
       `<div class="card">${topParts.map(([label,count])=>`<div class="service-row" style="cursor:default"><span class="svc-icon">🔧</span><div style="flex:1"><div class="svc-name">${label}</div><div style="margin-top:5px;height:4px;background:var(--s4);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.round((count/maxCount)*100)}%;background:var(--brand);border-radius:2px"></div></div></div><div class="km-val">${count}x</div></div>`).join('')}</div>`}`;
   }
@@ -2550,10 +2992,10 @@ let _eiBikeId = null;
 function openEditIntervals(bikeId) {
   _eiBikeId=bikeId||_maintBikeId;
   if (!_eiBikeId){showToast('⚠️ Open a specific bike\'s maintenance page first');return;}
-  const bike=APP.bikes.find(b=>b.id===_eiBikeId); if (!bike) return;
-  _eiItems=APP.items.filter(i=>i.bikeId===_eiBikeId).map(i=>({...i}));
+  const bike=findVeh(_eiBikeId); if (!bike) return;
+  _eiItems=itemsOf(_eiBikeId).map(i=>({...i}));
   const nameEl=document.getElementById('ei-bike-name');
-  if(nameEl) nameEl.textContent=bike.make+' '+bike.model+' '+bike.year;
+  if(nameEl) nameEl.textContent=vehEmoji(bike)+' '+bike.make+' '+bike.model+' '+bike.year;
   renderEiList(); openModal('editInterval');
 }
 
@@ -2611,16 +3053,17 @@ function addEiRow() {
 async function saveEditIntervals() {
   const invalid=_eiItems.find(i=>!i.partLabel||!i.partLabel.trim());
   if(invalid){showToast('⚠️ All items need a name');return;}
-  const bike=APP.bikes.find(b=>b.id===_eiBikeId);
+  const bike=findVeh(_eiBikeId);
   if(!bike){closeModal('editInterval');return;}
+  const kind=kindOf(bike); const C=COLL(kind);
   const saveBtn=document.querySelector('#modal-editInterval .btn-primary');
   if(saveBtn){saveBtn.textContent='Saving…';saveBtn.style.pointerEvents='none';}
   const keptIds=new Set(_eiItems.map(i=>i.id));
-  const removedItems=APP.items.filter(i=>i.bikeId===_eiBikeId&&!keptIds.has(i.id));
+  const removedItems=itemsOf(_eiBikeId).filter(i=>!keptIds.has(i.id));
   const updatedItems=[]; const newItems=[];
   _eiItems.forEach(edited=>{
     const kmInt=edited.intervalKm||0,dayInt=edited.intervalDays||365;
-    const existing=APP.items.find(i=>i.id===edited.id);
+    const existing=findItem(edited.id);
     if(existing){
       let nextKm=existing.nextKm,nextDate=existing.nextDate;
       if(kmInt>0&&existing.lastKm!==null) nextKm=existing.lastKm+kmInt;
@@ -2633,29 +3076,27 @@ async function saveEditIntervals() {
       let lastKm=null,nextKm=null;
       if(kmInt>0&&bike.km>0){lastKm=Math.floor(bike.km/kmInt)*kmInt;nextKm=lastKm+kmInt;}
       const nd=new Date();nd.setDate(nd.getDate()+dayInt);
-      const ni={id:edited.id,bikeId:_eiBikeId,partType:edited.partType||('custom_'+uid()),partLabel:edited.partLabel.trim(),intervalKm:kmInt,intervalDays:dayInt,lastKm,lastDate:null,nextKm,nextDate:nd.toISOString().split('T')[0],note:'',isCustom:true};
+      const ni={id:edited.id,kind,bikeId:_eiBikeId,partType:edited.partType||('custom_'+uid()),partLabel:edited.partLabel.trim(),intervalKm:kmInt,intervalDays:dayInt,lastKm,lastDate:null,nextKm,nextDate:nd.toISOString().split('T')[0],note:'',isCustom:true};
       ni.status=calcStatus(ni,bike.km); newItems.push(ni);
     }
   });
   if(isOnline()&&AW_SESSION) {
     try {
       await Promise.all([
-        ...removedItems.map(i=>awDelete('maintenance_items',i.id)),
-        ...updatedItems.map(i=>awUpdate('maintenance_items',i.id,{
+        ...removedItems.map(i=>awDelete(C.item,i.id)),
+        ...updatedItems.map(i=>awUpdate(C.item,i.id,{
           partLabel:i.partLabel,intervalKm:i.intervalKm,intervalDays:i.intervalDays,
           lastServiceKm:i.lastKm??null,lastServiceDate:i.lastDate||null,
           nextDueKm:i.nextKm??null,nextDueDate:i.nextDate||null,
-          // ▼ PATCH 6
           serviceStatus: i.status, isCustomInterval: i.isCustom||false,
           serviceType: i.serviceType || 'I', remarks: i.remarks || '',
         })),
-        ...newItems.map(i=>awCreate('maintenance_items',{
-          motorcycleId:i.bikeId,userId:AW_SESSION.userId,
+        ...newItems.map(i=>awCreate(C.item,{
+          [C.fk]:i.bikeId,userId:AW_SESSION.userId,
           partType:i.partType,partLabel:i.partLabel,
           intervalKm:i.intervalKm,intervalDays:i.intervalDays,
           lastServiceKm:i.lastKm??null,lastServiceDate:null,
           nextDueKm:i.nextKm??null,nextDueDate:i.nextDate||null,
-          // ▼ PATCH 7
           serviceStatus: i.status, isCustomInterval: true,
           serviceType: i.serviceType || 'I', remarks: i.remarks || '',
         },i.id)),
@@ -2666,9 +3107,11 @@ async function saveEditIntervals() {
       if(saveBtn){saveBtn.textContent='✓ Save Changes';saveBtn.style.pointerEvents='';}
     }
   }
-  APP.items=APP.items.filter(i=>i.bikeId!==_eiBikeId||keptIds.has(i.id));
-  updatedItems.forEach(upd=>{const idx=APP.items.findIndex(i=>i.id===upd.id);if(idx>=0)APP.items[idx]=upd;});
-  newItems.forEach(ni=>APP.items.push(ni));
+  const arr=itemArr(kind);
+  const filtered=arr.filter(i=>i.bikeId!==_eiBikeId||keptIds.has(i.id));
+  arr.length=0; filtered.forEach(i=>arr.push(i));
+  updatedItems.forEach(upd=>{const idx=arr.findIndex(i=>i.id===upd.id);if(idx>=0)arr[idx]=upd;});
+  newItems.forEach(ni=>arr.push(ni));
   closeModal('editInterval'); showToast('✓ Service intervals updated!'); renderAll();
 }
 
@@ -2702,7 +3145,7 @@ function setActiveNav(page) {
   if(el) el.classList.add('active');
 }
 
-function openModal(id){document.getElementById('modal-'+id)?.classList.add('open');if(id==='addBike')setTimeout(initAddBikeModal,30);}
+function openModal(id){document.getElementById('modal-'+id)?.classList.add('open');if(id==='addBike')setTimeout(initAddBikeModal,30);if(id==='addCar')setTimeout(initAddCarModal,30);}
 function closeModal(id){document.getElementById('modal-'+id)?.classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
@@ -2776,11 +3219,133 @@ function togglePendingItem(idx){_pendingItems[idx].enabled=!_pendingItems[idx].e
 function deletePendingItem(idx){_pendingItems.splice(idx,1);renderPendingItems();}
 function addCustomIntervalRow(){_pendingItems.push({_id:'ci_'+Date.now(),icon:'🔧',label:'',type:'custom_'+Date.now(),km:5000,days:365,note:'',enabled:true,isCustom:true,serviceType:'I',remarks:''});renderPendingItems();const list=document.getElementById('custom-intervals-list');if(list)setTimeout(()=>{list.scrollTop=list.scrollHeight;},50);}
 
+// ─── ADD CAR MODAL STEPS ──────────────────────────────────────────
+let _carPendingItems = [];
+function initAddCarModal() {
+  const grid=document.getElementById('car-type-grid');
+  if (!grid||grid.children.length>0) return;
+  Object.entries(CAR_TYPES).forEach(([key,t])=>{
+    const card=document.createElement('div'); card.className='type-card'; card.dataset.type=key;
+    card.innerHTML=`<span class="type-card-icon">${t.icon}</span><div class="type-card-name">${t.label}</div><div class="type-card-desc">${t.desc}</div>`;
+    card.onclick=()=>{document.querySelectorAll('#car-type-grid .type-card').forEach(c=>c.classList.remove('selected'));card.classList.add('selected');selectedCarType=key;const nb=document.getElementById('car-type-next-btn');if(nb){nb.style.opacity='1';nb.style.pointerEvents='';}};
+    grid.appendChild(card);
+  });
+}
+function addCarStep2(){if(!selectedCarType)return;document.getElementById('add-car-step-1').style.display='none';document.getElementById('add-car-step-2').style.display='';document.getElementById('add-car-step-dot-2').style.background='var(--brand)';const t=CAR_TYPES[selectedCarType];const b=document.getElementById('selected-car-type-badge');if(b)b.innerHTML=t.icon+' '+t.label;}
+function addCarStep1(){document.getElementById('add-car-step-1').style.display='';document.getElementById('add-car-step-2').style.display='none';const s3=document.getElementById('add-car-step-3');if(s3)s3.style.display='none';document.getElementById('add-car-step-dot-2').style.background='var(--s5)';const d3=document.getElementById('add-car-step-dot-3');if(d3)d3.style.background='var(--s5)';}
+function addCarStep3(){
+  const g=id=>document.getElementById(id)?.value?.trim()??'';
+  if(!g('car-make')){showToast('⚠️ Enter the car make');return;}
+  if(!g('car-model')){showToast('⚠️ Enter the car model');return;}
+  if(!g('car-year')){showToast('⚠️ Enter the year');return;}
+  if(g('car-km')===''){showToast('⚠️ Enter current odometer (0 if new)');return;}
+  document.getElementById('add-car-step-2').style.display='none';
+  document.getElementById('add-car-step-3').style.display='';
+  const d3=document.getElementById('add-car-step-dot-3'); if(d3) d3.style.background='var(--brand)';
+  const base=CAR_TYPES[selectedCarType]?CAR_TYPES[selectedCarType].items:[];
+  _carPendingItems=base.map((t,idx)=>({_id:'cpi_'+idx,icon:t.i||'🔧',label:t.n,type:t.partType||('custom_'+idx),km:t.km||0,days:t.days||365,note:t.note||'',enabled:true,isCustom:false,serviceType:t.t||'I',remarks:t.note||''}));
+  renderCarPendingItems();
+}
+function addCarStep2Back(){document.getElementById('add-car-step-3').style.display='none';document.getElementById('add-car-step-2').style.display='';const d3=document.getElementById('add-car-step-dot-3');if(d3)d3.style.background='var(--s5)';}
+
+function renderCarPendingItems(){
+  const list=document.getElementById('car-custom-intervals-list'); if(!list) return;
+  list.innerHTML='';
+  _carPendingItems.forEach((item,idx)=>{
+    const row=document.createElement('div'); row.className='ci-row'+(item.enabled?'':' disabled');
+    row.style.cssText='flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);align-items:center';
+    const namePart=item.isCustom?`<input class="form-input" style="flex:1;min-width:120px;padding:4px 6px;font-size:12px" value="${item.label.replace(/"/g,'&quot;')}" placeholder="Part name" oninput="_carPendingItems[${idx}].label=this.value"/>`:`<span style="flex:1;min-width:120px;font-size:13px;color:var(--text)">${item.label}</span>`;
+    const typeOpts=['I','C','R','A','L'].map(t=>`<option value="${t}" ${(item.serviceType||'I')===t?'selected':''}>${t}</option>`).join('');
+    row.innerHTML=`
+      <div style="display:flex;align-items:center;gap:6px;width:100%">
+        <span class="ci-icon">${item.icon}</span>
+        ${namePart}
+        <select class="form-input" style="width:auto;padding:4px 6px;font-size:11px;min-width:55px" onchange="_carPendingItems[${idx}].serviceType=this.value">${typeOpts}</select>
+        <button class="ci-toggle${item.enabled?' on':''}" title="${item.enabled?'Enabled':'Disabled'}" onclick="toggleCarPendingItem(${idx})"></button>
+        ${item.isCustom?`<button class="ci-del" onclick="deleteCarPendingItem(${idx})" title="Remove">✕</button>`:'<span style="width:22px"></span>'}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;width:100%;margin-top:5px">
+        <input class="ci-input" type="number" min="0" step="500" value="${item.km}" title="km interval" oninput="_carPendingItems[${idx}].km=parseInt(this.value)||0"/>
+        <span class="ci-unit">km</span>
+        <input class="ci-input" type="number" min="1" step="1" value="${item.days}" title="day interval" oninput="_carPendingItems[${idx}].days=parseInt(this.value)||1"/>
+        <span class="ci-unit">days</span>
+        <input class="form-input" style="flex:1;min-width:100px;padding:4px 6px;font-size:11px" placeholder="Remarks" value="${(item.remarks||'').replace(/"/g,'&quot;')}" oninput="_carPendingItems[${idx}].remarks=this.value"/>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+function toggleCarPendingItem(idx){_carPendingItems[idx].enabled=!_carPendingItems[idx].enabled;renderCarPendingItems();}
+function deleteCarPendingItem(idx){_carPendingItems.splice(idx,1);renderCarPendingItems();}
+function addCarCustomRow(){_carPendingItems.push({_id:'cci_'+Date.now(),icon:'🔧',label:'',type:'custom_'+Date.now(),km:10000,days:365,note:'',enabled:true,isCustom:true,serviceType:'I',remarks:''});renderCarPendingItems();const list=document.getElementById('car-custom-intervals-list');if(list)setTimeout(()=>{list.scrollTop=list.scrollHeight;},50);}
+
+async function submitAddCar() {
+  if (!selectedCarType) { showToast('⚠️ Please select a car type first'); return; }
+  const g=(id)=>document.getElementById(id)?.value?.trim()??'';
+  const make=g('car-make'),model=g('car-model'),year=g('car-year'),km=g('car-km'),nick=g('car-nick'),color=g('car-color');
+  if (!make)  { showToast('⚠️ Enter the car make');  return; }
+  if (!model) { showToast('⚠️ Enter the car model'); return; }
+  if (!year)  { showToast('⚠️ Enter the year');       return; }
+  if (km==='') { showToast('⚠️ Enter current odometer (0 if new)'); return; }
+  const regDate=g('car-reg-date'),lastInsp=g('car-insp');
+  const nextInsp=lastInsp?calcNextInspection(regDate||(parseInt(year)+'-01-01'),lastInsp):'';
+  const car={id:uid(),kind:'car',make,model,year:parseInt(year),km:parseInt(km)||0,nickname:nick||'',color:color||'',vin:g('car-vin'),bikeType:selectedCarType,addedAt:new Date().toISOString(),
+    registrationDate:regDate,inspectionDate:lastInsp,nextInspectionDate:nextInsp,
+    roadTaxExpiry:g('car-roadtax'),insuranceExpiry:g('car-insurance-exp'),
+    insuranceProvider:g('car-insurer'),insurancePolicyNo:g('car-policy'),coeExpiry:g('car-coe'),
+    registrationNumber:g('car-reg-num'),iuNumber:g('car-iu'),fuelType:g('car-fuel'),
+    transmission:g('car-transmission'),engineCapacity:g('car-engine-cc'),coeCategory:g('car-coe-cat'),
+    seasonParkingExpiry:g('car-season'),warrantyExpiry:g('car-warranty')};
+  const enabledPending=_carPendingItems.filter(pi=>pi.enabled&&pi.label.trim());
+  const newItems=(enabledPending.length>0 ? buildItemsFromPending(car,enabledPending) : estimateItemsForBike(car,selectedCarType)).map(i=>({...i,kind:'car'}));
+
+  if (isOnline()&&AW_SESSION) {
+    const btn=document.querySelector('#add-car-step-3 .btn-primary');
+    if (btn){btn.textContent='Saving…';btn.style.pointerEvents='none';}
+    try {
+      await awCreate('cars',{userId:AW_SESSION.userId,make:car.make,model:car.model,year:car.year,currentKm:car.km,nickname:car.nickname||'',color:car.color||'',vin:car.vin||'',carType:car.bikeType||'sedan',
+        registrationDate:car.registrationDate||null,inspectionDate:car.inspectionDate||null,nextInspectionDate:car.nextInspectionDate||null,
+        roadTaxExpiry:car.roadTaxExpiry||null,insuranceExpiry:car.insuranceExpiry||null,
+        insuranceProvider:car.insuranceProvider||null,insurancePolicyNo:car.insurancePolicyNo||null,coeExpiry:car.coeExpiry||null,
+        registrationNumber:car.registrationNumber||null,iuNumber:car.iuNumber||null,fuelType:car.fuelType||null,
+        transmission:car.transmission||null,engineCapacity:car.engineCapacity||null,coeCategory:car.coeCategory||null,
+        seasonParkingExpiry:car.seasonParkingExpiry||null,warrantyExpiry:car.warrantyExpiry||null},car.id);
+      await Promise.all(newItems.map(item=>awCreate('car_maintenance_items',{
+        carId:item.bikeId, userId:AW_SESSION.userId,
+        partType:item.partType||'custom', partLabel:item.partLabel,
+        intervalKm:item.intervalKm||0, intervalDays:item.intervalDays||365,
+        lastServiceKm:item.lastKm??null, lastServiceDate:item.lastDate||null,
+        nextDueKm:item.nextKm??null, nextDueDate:item.nextDate||null,
+        serviceStatus: item.status||'never_serviced', isCustomInterval:item.isCustom||false,
+        serviceType:item.serviceType||'I', remarks:item.remarks||''},item.id)));
+    } catch(err) {
+      if (btn){btn.textContent='✓ Add Car';btn.style.pointerEvents='';}
+      showToast('❌ Could not save to database: '+(err.message||'unknown error'));
+      return;
+    } finally {
+      if (btn){btn.textContent='✓ Add Car';btn.style.pointerEvents='';}
+    }
+  }
+
+  APP.cars.push(car); APP.carItems.push(...newItems);
+  closeModal('addCar');
+  setTimeout(()=>{
+    addCarStep1();
+    const s3=document.getElementById('add-car-step-3'); if(s3) s3.style.display='none';
+    document.querySelectorAll('#car-type-grid .type-card').forEach(c=>c.classList.remove('selected'));
+    selectedCarType=null; _carPendingItems=[];
+    ['car-make','car-model','car-year','car-km','car-nick','car-color','car-vin','car-reg-num','car-iu','car-engine-cc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const nb=document.getElementById('car-type-next-btn'); if(nb){nb.style.opacity='.5';nb.style.pointerEvents='none';}
+  },300);
+  showToast(`🚗 ${make} ${model} added! ${newItems.length} service items created.`);
+  renderAll(); nav('bikes',null); setActiveNav('bikes');
+}
+
 // ─── TEMPLATES ────────────────────────────────────────────────────
 function renderTemplates(typeKey) {
   activeTemplateType=typeKey;
-  const tplEl=document.getElementById('templates-list'); if(!tplEl||!BIKE_TYPES[typeKey]) return;
-  const typeInfo=BIKE_TYPES[typeKey];
+  const tplEl=document.getElementById('templates-list');
+  const typeInfo=BIKE_TYPES[typeKey]||CAR_TYPES[typeKey];
+  if(!tplEl||!typeInfo) return;
   tplEl.innerHTML=`<div style="padding:14px 16px 10px;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:20px">${typeInfo.icon}</span><div style="flex:1"><div style="font-family:'Exo 2',sans-serif;font-weight:700;font-size:14px;color:var(--text)">${typeInfo.label}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${typeInfo.source}</div></div></div></div>`;
   typeInfo.items.forEach((t,idx)=>{
     const row=document.createElement('div'); row.className='tpl-row'; row.dataset.idx=idx;
@@ -2791,8 +3356,14 @@ function renderTemplates(typeKey) {
 function renderTypeSwitcher(){
   const container=document.getElementById('ov-templates'); if(!container) return;
   const existing=document.getElementById('type-switcher'); if(existing) existing.remove();
-  const switcher=document.createElement('div'); switcher.id='type-switcher'; switcher.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:4px';
-  Object.entries(BIKE_TYPES).forEach(([key,t])=>{const btn=document.createElement('button');btn.className='btn btn-sm '+(key===activeTemplateType?'btn-primary':'btn-secondary');btn.style.flexShrink='0';btn.innerHTML=t.icon+' '+t.label.split(' /')[0].trim();btn.onclick=()=>{renderTemplates(key);renderTypeSwitcher();};switcher.appendChild(btn);});
+  const switcher=document.createElement('div'); switcher.id='type-switcher'; switcher.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;align-items:center';
+  const addBtns=(map)=>Object.entries(map).forEach(([key,t])=>{const btn=document.createElement('button');btn.className='btn btn-sm '+(key===activeTemplateType?'btn-primary':'btn-secondary');btn.style.flexShrink='0';btn.innerHTML=t.icon+' '+t.label.split(' /')[0].trim();btn.onclick=()=>{renderTemplates(key);renderTypeSwitcher();};switcher.appendChild(btn);});
+  const sep=document.createElement('span'); sep.textContent='🏍️ Bikes'; sep.style.cssText='font-size:11px;color:var(--text3);font-weight:700;margin-right:2px';
+  switcher.appendChild(sep);
+  addBtns(BIKE_TYPES);
+  const sep2=document.createElement('span'); sep2.textContent='🚗 Cars'; sep2.style.cssText='font-size:11px;color:var(--text3);font-weight:700;margin:0 2px';
+  switcher.appendChild(sep2);
+  addBtns(CAR_TYPES);
   const tplCard=document.getElementById('templates-list'); if(tplCard) container.insertBefore(switcher,tplCard);
 }
 function tplEdit(idx){const row=document.querySelector('.tpl-row[data-idx="'+idx+'"]');if(row)row.classList.add('editing');}
@@ -2800,7 +3371,7 @@ function tplSave(idx){
   const row=document.querySelector('.tpl-row[data-idx="'+idx+'"]'); if(!row) return;
   const kmVal=parseInt(row.querySelector('.km-inp').value)||0;
   const daysVal=parseInt(row.querySelector('.days-inp').value)||1;
-  const items=BIKE_TYPES[activeTemplateType]?.items;
+  const items=(BIKE_TYPES[activeTemplateType]||CAR_TYPES[activeTemplateType])?.items;
   if(items?.[idx]){items[idx].km=kmVal;items[idx].days=daysVal;}
   const disp=row.querySelector('.tpl-val-display');
   if(disp) disp.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--brand);text-align:right">${kmVal>0?kmVal.toLocaleString()+' km':'—'}</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:right">${daysVal} days</div>`;
@@ -2856,23 +3427,31 @@ function saveProfile() {
 
 function signOut(){
   if(!confirm('Sign out? All unsaved data will be lost.')) return;
-  APP.bikes=[];APP.items=[];APP.history=[];APP.nextId=1;APP.profile={name:'Rider',email:''};
+  APP.bikes=[];APP.items=[];APP.history=[];APP.cars=[];APP.carItems=[];APP.carHistory=[];APP.nextId=1;APP.profile={name:'Rider',email:''};
   clearState();currentTheme='dark';currentCurrency='SGD';
   document.body.setAttribute('data-theme','dark');
   updateNameEverywhere('Rider');renderAll();nav('dashboard',null);setActiveNav('dashboard');
   showToast('👋 Signed out.');
 }
 
-// ─── DELETE BIKE ──────────────────────────────────────────────────
+// ─── DELETE VEHICLE (motorcycle or car) ───────────────────────────
 async function deleteBike(bikeId) {
-  if (!confirm('Delete this motorcycle and all its maintenance data?')) return;
-  const delItemIds=APP.items.filter(i=>i.bikeId===bikeId).map(i=>i.id);
-  const delHistIds=APP.history.filter(h=>h.bikeId===bikeId).map(h=>h.id);
-  if(isOnline()&&AW_SESSION){try{await Promise.all([awDelete('motorcycles',bikeId),...delItemIds.map(id=>awDelete('maintenance_items',id)),...delHistIds.map(id=>awDelete('service_records',id))]);}catch(err){showToast('❌ Could not delete from database: '+(err.message||'error'));return;}}
-  APP.bikes=APP.bikes.filter(b=>b.id!==bikeId);
-  APP.items=APP.items.filter(i=>i.bikeId!==bikeId);
-  APP.history=APP.history.filter(h=>h.bikeId!==bikeId);
-  renderAll(); showToast('🗑 Motorcycle deleted');
+  const veh=findVeh(bikeId); if(!veh) return;
+  const kind=kindOf(veh); const C=COLL(kind); const label=kind==='car'?'car':'motorcycle';
+  if (!confirm('Delete this '+label+' and all its maintenance data?')) return;
+  const delItemIds=itemArr(kind).filter(i=>i.bikeId===bikeId).map(i=>i.id);
+  const delHistIds=histArr(kind).filter(h=>h.bikeId===bikeId).map(h=>h.id);
+  if(isOnline()&&AW_SESSION){try{await Promise.all([awDelete(C.veh,bikeId),...delItemIds.map(id=>awDelete(C.item,id)),...delHistIds.map(id=>awDelete(C.rec,id))]);}catch(err){showToast('❌ Could not delete from database: '+(err.message||'error'));return;}}
+  if(kind==='car'){
+    APP.cars=APP.cars.filter(b=>b.id!==bikeId);
+    APP.carItems=APP.carItems.filter(i=>i.bikeId!==bikeId);
+    APP.carHistory=APP.carHistory.filter(h=>h.bikeId!==bikeId);
+  } else {
+    APP.bikes=APP.bikes.filter(b=>b.id!==bikeId);
+    APP.items=APP.items.filter(i=>i.bikeId!==bikeId);
+    APP.history=APP.history.filter(h=>h.bikeId!==bikeId);
+  }
+  renderAll(); showToast('🗑 '+(kind==='car'?'Car':'Motorcycle')+' deleted');
 }
 
 // ─── DEBUG ────────────────────────────────────────────────────────
@@ -2968,7 +3547,7 @@ window.showDebugInfo = async function() {
 <nav id="bottom-nav">
   <div class="bnav-items">
     <div class="bnav-item active" id="bnav-dashboard" onclick="nav('dashboard',null);setActiveNav('dashboard')"><span class="bnav-icon">📊</span><span class="bnav-label">Dashboard</span><span class="bnav-badge" id="bnav-badge" style="display:none">0</span></div>
-    <div class="bnav-item" id="bnav-bikes" onclick="nav('bikes',null);setActiveNav('bikes')"><span class="bnav-icon">🏍️</span><span class="bnav-label">Bikes</span></div>
+    <div class="bnav-item" id="bnav-bikes" onclick="nav('bikes',null);setActiveNav('bikes')"><span class="bnav-icon">🚗</span><span class="bnav-label">Vehicles</span></div>
     <div class="bnav-item" id="bnav-maintenance" onclick="nav('maintenance',null);setActiveNav('maintenance')"><span class="bnav-icon">🔧</span><span class="bnav-label">Service</span></div>
     <div class="bnav-item" id="bnav-history" onclick="nav('history',null);setActiveNav('history')"><span class="bnav-icon">📋</span><span class="bnav-label">History</span></div>
     <div class="bnav-item" id="bnav-overview" onclick="nav('overview',null);setActiveNav('overview')"><span class="bnav-icon">🔭</span><span class="bnav-label">Overview</span></div>
