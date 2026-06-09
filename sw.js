@@ -9,7 +9,7 @@
  *
  * Bump VERSION whenever you want every client to force-refresh its cache.
  */
-const VERSION = 'v2026-06-09-040034';
+const VERSION = 'v2026-06-09-040507';
 const CACHE   = 'motomaintain-' + VERSION;
 const ASSETS  = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
 

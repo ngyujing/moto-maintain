@@ -679,7 +679,7 @@ const APPWRITE_DATABASE   = 'moto_maintain_db';
 // ─── APP STATE ────────────────────────────────────────────────────
 // APP_BUILD is auto-bumped by .githooks/pre-commit on every deploy; it mirrors
 // the service-worker VERSION so you can compare the Build stamp across devices.
-const APP_BUILD = 'v2026-06-09-040034';
+const APP_BUILD = 'v2026-06-09-040507';
 const STORAGE_KEY = 'motomaintain_v1';
 const APP = { bikes:[], items:[], history:[], nextId:1, profile:{name:'Rider',email:''} };
 let selectedBikeType = null;
@@ -1818,11 +1818,26 @@ function loadState() {
     return true;
   } catch(e){console.warn('MotoMaintain: load failed',e);return false;}
 }
-function loadThemeOnly() {
-  const keys=['local',AW_SESSION&&AW_SESSION.userId].filter(Boolean);
-  for(const k of keys){try{const raw=localStorage.getItem(STORAGE_KEY+'_'+k)||(k==='local'?localStorage.getItem(STORAGE_KEY):null);if(!raw)continue;const d=JSON.parse(raw);if(d.theme){currentTheme=d.theme;document.body.setAttribute('data-theme',d.theme);}if(d.currency){currentCurrency=d.currency;}return;}catch{}}
-}
 function clearState() { try{localStorage.removeItem(STORAGE_KEY);}catch(e){} }
+
+// Theme/currency are device-wide preferences, stored independently of the
+// per-user state so they load correctly at boot (before the session is known).
+function savePrefs() {
+  try { localStorage.setItem('mm_prefs', JSON.stringify({ theme: currentTheme, currency: currentCurrency })); } catch(e){}
+}
+function loadThemeOnly() {
+  try {
+    const p = JSON.parse(localStorage.getItem('mm_prefs') || 'null');
+    if (p) {
+      if (p.theme)    { currentTheme = p.theme; document.body.setAttribute('data-theme', p.theme); }
+      if (p.currency) { currentCurrency = p.currency; }
+      return;
+    }
+  } catch {}
+  // Legacy fallback: pull theme from a previously saved per-user/local state.
+  const keys=['local',AW_SESSION&&AW_SESSION.userId].filter(Boolean);
+  for(const k of keys){try{const raw=localStorage.getItem(STORAGE_KEY+'_'+k)||(k==='local'?localStorage.getItem(STORAGE_KEY):null);if(!raw)continue;const d=JSON.parse(raw);if(d.theme){currentTheme=d.theme;document.body.setAttribute('data-theme',d.theme);}if(d.currency){currentCurrency=d.currency;}savePrefs();return;}catch{}}
+}
 
 // ─── MAINTENANCE CALCULATIONS ─────────────────────────────────────
 function calcNextDue(lastKm,intervalKm,currentKm) {
@@ -2694,9 +2709,9 @@ document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click
 let toastTimer;
 function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);}
 
-function setTheme(theme){document.body.setAttribute('data-theme',theme);currentTheme=theme;['dark','mid','light'].forEach(t=>document.getElementById('theme-'+t)?.classList.toggle('selected',t===theme));saveState();showToast('🎨 '+theme.charAt(0).toUpperCase()+theme.slice(1)+' theme applied');}
+function setTheme(theme){document.body.setAttribute('data-theme',theme);currentTheme=theme;['dark','mid','light'].forEach(t=>document.getElementById('theme-'+t)?.classList.toggle('selected',t===theme));savePrefs();saveState();showToast('🎨 '+theme.charAt(0).toUpperCase()+theme.slice(1)+' theme applied');}
 
-function setCurrency(code,btn){currentCurrency=code;document.querySelectorAll('.currency-btn').forEach(b=>b.classList.remove('selected'));if(btn)btn.classList.add('selected');const sym=CURRENCY_SYMBOLS[code]||code;document.querySelectorAll('.currency-display').forEach(el=>el.textContent=sym);saveState();showToast('💱 Currency set to '+code);renderHistory();renderOverview();}
+function setCurrency(code,btn){currentCurrency=code;document.querySelectorAll('.currency-btn').forEach(b=>b.classList.remove('selected'));if(btn)btn.classList.add('selected');const sym=CURRENCY_SYMBOLS[code]||code;document.querySelectorAll('.currency-display').forEach(el=>el.textContent=sym);savePrefs();saveState();showToast('💱 Currency set to '+code);renderHistory();renderOverview();}
 
 function overviewTab(tab,el){['summary','due','analytics','templates'].forEach(t=>{const e=document.getElementById('ov-'+t);if(e)e.style.display='none';});document.getElementById('ov-'+tab).style.display='';document.querySelectorAll('#page-overview .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderOverview();}
 
