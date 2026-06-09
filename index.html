@@ -1250,6 +1250,45 @@ async function awDelete(collection,docId) {
   return awFetch('DELETE',`/databases/${APPWRITE_DATABASE}/collections/${collection}/documents/${docId}`,null);
 }
 
+// Tracks attributes that were dropped because the collection's schema is
+// missing them (e.g. the car setup script hit Appwrite's rate limit). Surfaced
+// to the user as a non-blocking warning so the record still saves.
+const _schemaDropped = new Set();
+function _stripUnknownAttr(collection, data, err) {
+  const m = (err && err.message || '').match(/Unknown attribute:\s*"?([A-Za-z0-9_]+)"?/i);
+  if (m && Object.prototype.hasOwnProperty.call(data, m[1])) {
+    delete data[m[1]];
+    _schemaDropped.add(collection + '.' + m[1]);
+    return true;
+  }
+  return false;
+}
+// Resilient create/update: if the collection is missing an attribute, drop that
+// field and retry, so a partial schema can't block saving. Same docId is reused
+// on retry — a validation 400 means nothing was written yet.
+async function awCreateSafe(collection, data, docId) {
+  const d = { ...data };
+  for (let i = 0; i < 50; i++) {
+    try { return await awCreate(collection, d, docId); }
+    catch(err) { if (err.code === 400 && _stripUnknownAttr(collection, d, err)) continue; throw err; }
+  }
+  throw new Error('Too many unknown attributes for ' + collection);
+}
+async function awUpdateSafe(collection, docId, data) {
+  const d = { ...data };
+  for (let i = 0; i < 50; i++) {
+    try { return await awUpdate(collection, docId, d); }
+    catch(err) { if (err.code === 400 && _stripUnknownAttr(collection, d, err)) continue; throw err; }
+  }
+  throw new Error('Too many unknown attributes for ' + collection);
+}
+function warnIfSchemaDropped() {
+  if (!_schemaDropped.size) return;
+  const fields = [...new Set([..._schemaDropped].map(s => s.split('.')[1]))];
+  showToast('⚠️ Saved, but these fields need DB setup: ' + fields.join(', ') + '. Re-run scripts/setup-appwrite-cars.js');
+  _schemaDropped.clear();
+}
+
 // ─── USER DATA BOOTSTRAP ──────────────────────────────────────────
 // ── Core data fetch from Appwrite — used by initAppForUser and syncFromCloud ──
 async function _fetchCloudData(userId) {
@@ -1836,7 +1875,7 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.roadTaxExpiry = newDate;
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { roadTaxExpiry: newDate });
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, { roadTaxExpiry: newDate });
     },
   },
   insurance: {
@@ -1868,7 +1907,7 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.insuranceExpiry = newDate;
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { insuranceExpiry: newDate });
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, { insuranceExpiry: newDate });
     },
   },
   inspection: {
@@ -1906,7 +1945,7 @@ const RENEWAL_CFG = {
       const inspDate = document.getElementById('renewal-insp-date')?.value || new Date().toISOString().split('T')[0];
       bike.inspectionDate = inspDate;
       bike.nextInspectionDate = newDate;
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { inspectionDate: inspDate, nextInspectionDate: newDate });
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, { inspectionDate: inspDate, nextInspectionDate: newDate });
     },
   },
   coe: {
@@ -1939,7 +1978,7 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.coeExpiry = newDate;
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { coeExpiry: newDate });
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, { coeExpiry: newDate });
     },
   },
   seasonParking: {
@@ -1972,7 +2011,7 @@ const RENEWAL_CFG = {
     },
     save: async (bike, newDate) => {
       bike.seasonParkingExpiry = newDate;
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { seasonParkingExpiry: newDate });
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, { seasonParkingExpiry: newDate });
     },
   },
   warranty: {
@@ -1991,7 +2030,7 @@ const RENEWAL_CFG = {
     calc: (bike) => document.getElementById('renewal-new-date')?.value || '',
     save: async (bike, newDate) => {
       bike.warrantyExpiry = newDate;
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, { warrantyExpiry: newDate });
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, { warrantyExpiry: newDate });
     },
   },
 };
@@ -2071,6 +2110,7 @@ async function saveRenewal() {
       bikeDetailTab('ownership', null);
     }
     showToast('✓ ' + cfg.title + (costAmount > 0 && costLogged ? ' · ' + getCurrency() + ' ' + costAmount.toFixed(2) : '') + ' — next due: ' + fmtDate(newDate));
+    setTimeout(warnIfSchemaDropped, 1200);
   } catch(err) {
     showToast('❌ Could not save: ' + (err.message || 'error'));
   } finally {
@@ -2092,7 +2132,7 @@ async function logOwnershipCost(bike, label, amount, dateStr, notesText) {
   histArr(kind).push(rec);
   if (isOnline() && AW_SESSION) {
     try {
-      await awCreate(C.rec, {
+      await awCreateSafe(C.rec, {
         [C.fk]: rec.bikeId,
         // Use the record's own id here: `maintenanceItemId` may be a required
         // attribute in the collection, and ownership records have no real
@@ -2380,14 +2420,14 @@ async function doCompleteService() {
     if (saveBtn){saveBtn.textContent='Saving…';saveBtn.style.pointerEvents='none';}
     try {
       const notesWithTypes = '[TYPES:'+performedTypes.join(',')+'] '+(newRecord.notes||'');
-      await awCreate(C.rec,{[C.fk]:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
-      await awUpdate(C.item,updatedItem.id,{
+      await awCreateSafe(C.rec,{[C.fk]:newRecord.bikeId,maintenanceItemId:newRecord.itemId,userId:AW_SESSION.userId,completedBy:AW_SESSION.userId,partType:newRecord.partType||'',partLabel:newRecord.partLabel,serviceDate:newRecord.date,mileageAtService:newRecord.km,cost:newRecord.cost||null,notes:notesWithTypes},newRecord.id);
+      await awUpdateSafe(C.item,updatedItem.id,{
         lastServiceKm:updatedItem.lastKm, lastServiceDate:updatedItem.lastDate,
         nextDueKm:       updatedItem.nextKm   ?? null,
         nextDueDate:     updatedItem.nextDate  || null,
         serviceStatus:   updatedItem.status,
       });
-      if (bike&&km>bike.km) await awUpdate(C.veh,bike.id,{currentKm:km});
+      if (bike&&km>bike.km) await awUpdateSafe(C.veh,bike.id,{currentKm:km});
     } catch(err) {
       showToast('❌ Could not save to database: '+(err.message||'error'));
       return;
@@ -2425,7 +2465,7 @@ async function doUpdateOdometer() {
   if (newKm<=bike.km) { showToast('⚠️ New km must be higher than current ('+bike.km.toLocaleString()+' km)'); return; }
   const C=COLL(kindOf(bike));
   if (isOnline()&&AW_SESSION) {
-    try { await awUpdate(C.veh,bike.id,{currentKm:newKm}); }
+    try { await awUpdateSafe(C.veh,bike.id,{currentKm:newKm}); }
     catch(err) { showToast('❌ Could not update odometer: '+(err.message||'error')); return; }
   }
   bike.km=newKm;
@@ -2526,7 +2566,7 @@ async function saveOwnershipDetails() {
         seasonParkingExpiry:updates.seasonParkingExpiry || null,
         warrantyExpiry:     updates.warrantyExpiry || null,
       });
-      await awUpdate(COLL(kindOf(bike)).veh, bike.id, payload);
+      await awUpdateSafe(COLL(kindOf(bike)).veh, bike.id, payload);
     } catch(err) {
       showToast('❌ Could not save: ' + (err.message || 'error'));
       return;
@@ -2565,6 +2605,7 @@ async function saveOwnershipDetails() {
   renderBikeDetail(bike.id); // refresh the detail view
   renderHistory();
   showToast('✓ Ownership details saved!');
+  setTimeout(warnIfSchemaDropped, 1200);
 }
 
 function bikeDetailTab(tab, el) {
@@ -3084,14 +3125,14 @@ async function saveEditIntervals() {
     try {
       await Promise.all([
         ...removedItems.map(i=>awDelete(C.item,i.id)),
-        ...updatedItems.map(i=>awUpdate(C.item,i.id,{
+        ...updatedItems.map(i=>awUpdateSafe(C.item,i.id,{
           partLabel:i.partLabel,intervalKm:i.intervalKm,intervalDays:i.intervalDays,
           lastServiceKm:i.lastKm??null,lastServiceDate:i.lastDate||null,
           nextDueKm:i.nextKm??null,nextDueDate:i.nextDate||null,
           serviceStatus: i.status, isCustomInterval: i.isCustom||false,
           serviceType: i.serviceType || 'I', remarks: i.remarks || '',
         })),
-        ...newItems.map(i=>awCreate(C.item,{
+        ...newItems.map(i=>awCreateSafe(C.item,{
           [C.fk]:i.bikeId,userId:AW_SESSION.userId,
           partType:i.partType,partLabel:i.partLabel,
           intervalKm:i.intervalKm,intervalDays:i.intervalDays,
@@ -3305,14 +3346,14 @@ async function submitAddCar() {
     const btn=document.querySelector('#add-car-step-3 .btn-primary');
     if (btn){btn.textContent='Saving…';btn.style.pointerEvents='none';}
     try {
-      await awCreate('cars',{userId:AW_SESSION.userId,make:car.make,model:car.model,year:car.year,currentKm:car.km,nickname:car.nickname||'',color:car.color||'',vin:car.vin||'',carType:car.bikeType||'sedan',
+      await awCreateSafe('cars',{userId:AW_SESSION.userId,make:car.make,model:car.model,year:car.year,currentKm:car.km,nickname:car.nickname||'',color:car.color||'',vin:car.vin||'',carType:car.bikeType||'sedan',
         registrationDate:car.registrationDate||null,inspectionDate:car.inspectionDate||null,nextInspectionDate:car.nextInspectionDate||null,
         roadTaxExpiry:car.roadTaxExpiry||null,insuranceExpiry:car.insuranceExpiry||null,
         insuranceProvider:car.insuranceProvider||null,insurancePolicyNo:car.insurancePolicyNo||null,coeExpiry:car.coeExpiry||null,
         registrationNumber:car.registrationNumber||null,iuNumber:car.iuNumber||null,fuelType:car.fuelType||null,
         transmission:car.transmission||null,engineCapacity:car.engineCapacity||null,coeCategory:car.coeCategory||null,
         seasonParkingExpiry:car.seasonParkingExpiry||null,warrantyExpiry:car.warrantyExpiry||null},car.id);
-      await Promise.all(newItems.map(item=>awCreate('car_maintenance_items',{
+      await Promise.all(newItems.map(item=>awCreateSafe('car_maintenance_items',{
         carId:item.bikeId, userId:AW_SESSION.userId,
         partType:item.partType||'custom', partLabel:item.partLabel,
         intervalKm:item.intervalKm||0, intervalDays:item.intervalDays||365,
@@ -3344,6 +3385,7 @@ async function submitAddCar() {
   },300);
   showToast(`🚗 ${make} ${model} added! ${newItems.length} service items created.`);
   renderAll(); nav('bikes',null); setActiveNav('bikes');
+  setTimeout(warnIfSchemaDropped, 1200);
 }
 
 // ─── TEMPLATES ────────────────────────────────────────────────────
