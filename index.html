@@ -129,7 +129,7 @@ h1,h2,h3,h4,h5{font-family:'Exo 2',sans-serif}
 .tl-details{display:flex;gap:12px;font-size:11px;color:var(--text3)}
 .modal-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px}
 .modal-overlay.open{display:flex}
-.modal{background:var(--s2);border:1px solid rgba(249,115,22,0.25);border-radius:16px;padding:28px;width:100%;max-width:460px;animation:slideUp .25s ease}
+.modal{background:var(--s2);border:1px solid rgba(249,115,22,0.25);border-radius:16px;padding:28px;width:100%;max-width:460px;animation:slideUp .25s ease;max-height:calc(100vh - 32px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .modal-title{font-family:'Exo 2',sans-serif;font-size:17px;font-weight:700;color:var(--text)}
@@ -3145,7 +3145,8 @@ function setActiveNav(page) {
   if(el) el.classList.add('active');
 }
 
-function openModal(id){document.getElementById('modal-'+id)?.classList.add('open');if(id==='addBike')setTimeout(initAddBikeModal,30);if(id==='addCar')setTimeout(initAddCarModal,30);}
+function scrollModalTop(id){const m=document.querySelector('#modal-'+id+' .modal');if(m)m.scrollTop=0;}
+function openModal(id){const o=document.getElementById('modal-'+id);o?.classList.add('open');if(id==='addBike')setTimeout(initAddBikeModal,30);if(id==='addCar')setTimeout(initAddCarModal,30);setTimeout(()=>scrollModalTop(id),20);}
 function closeModal(id){document.getElementById('modal-'+id)?.classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
@@ -3170,8 +3171,8 @@ function initAddBikeModal() {
   });
 }
 
-function addBikeStep2(){if(!selectedBikeType)return;document.getElementById('add-step-1').style.display='none';document.getElementById('add-step-2').style.display='';document.getElementById('add-step-dot-2').style.background='var(--brand)';const t=BIKE_TYPES[selectedBikeType];const badge2=document.getElementById('selected-type-badge');if(badge2)badge2.innerHTML=t.icon+' '+t.label;}
-function addBikeStep1(){document.getElementById('add-step-1').style.display='';document.getElementById('add-step-2').style.display='none';const s3=document.getElementById('add-step-3');if(s3)s3.style.display='none';document.getElementById('add-step-dot-2').style.background='var(--s5)';const dot3=document.getElementById('add-step-dot-3');if(dot3)dot3.style.background='var(--s5)';}
+function addBikeStep2(){if(!selectedBikeType)return;document.getElementById('add-step-1').style.display='none';document.getElementById('add-step-2').style.display='';document.getElementById('add-step-dot-2').style.background='var(--brand)';const t=BIKE_TYPES[selectedBikeType];const badge2=document.getElementById('selected-type-badge');if(badge2)badge2.innerHTML=t.icon+' '+t.label;scrollModalTop('addBike');}
+function addBikeStep1(){document.getElementById('add-step-1').style.display='';document.getElementById('add-step-2').style.display='none';const s3=document.getElementById('add-step-3');if(s3)s3.style.display='none';document.getElementById('add-step-dot-2').style.background='var(--s5)';const dot3=document.getElementById('add-step-dot-3');if(dot3)dot3.style.background='var(--s5)';scrollModalTop('addBike');}
 function addBikeStep3(){
   const g=id=>document.getElementById(id)?.value?.trim()??'';
   if(!g('bike-make')){showToast('⚠️ Enter the bike make');return;}
@@ -3186,8 +3187,9 @@ function addBikeStep3(){
     _pendingItems=base.map((t,idx)=>({_id:'pi_'+idx,icon:t.i||'🔧',label:t.n,type:t.partType||('custom_'+idx),km:t.km||0,days:t.days||365,note:t.note||'',enabled:true,isCustom:false,serviceType:t.t||'I',remarks:t.note||''}));
     renderPendingItems();
   });
+  scrollModalTop('addBike');
 }
-function addBikeStep2Back(){document.getElementById('add-step-3').style.display='none';document.getElementById('add-step-2').style.display='';const dot3=document.getElementById('add-step-dot-3');if(dot3)dot3.style.background='var(--s5)';}
+function addBikeStep2Back(){document.getElementById('add-step-3').style.display='none';document.getElementById('add-step-2').style.display='';const dot3=document.getElementById('add-step-dot-3');if(dot3)dot3.style.background='var(--s5)';scrollModalTop('addBike');}
 
 function renderPendingItems(){
   const list=document.getElementById('custom-intervals-list'); if(!list) return;
@@ -3231,8 +3233,8 @@ function initAddCarModal() {
     grid.appendChild(card);
   });
 }
-function addCarStep2(){if(!selectedCarType)return;document.getElementById('add-car-step-1').style.display='none';document.getElementById('add-car-step-2').style.display='';document.getElementById('add-car-step-dot-2').style.background='var(--brand)';const t=CAR_TYPES[selectedCarType];const b=document.getElementById('selected-car-type-badge');if(b)b.innerHTML=t.icon+' '+t.label;}
-function addCarStep1(){document.getElementById('add-car-step-1').style.display='';document.getElementById('add-car-step-2').style.display='none';const s3=document.getElementById('add-car-step-3');if(s3)s3.style.display='none';document.getElementById('add-car-step-dot-2').style.background='var(--s5)';const d3=document.getElementById('add-car-step-dot-3');if(d3)d3.style.background='var(--s5)';}
+function addCarStep2(){if(!selectedCarType)return;document.getElementById('add-car-step-1').style.display='none';document.getElementById('add-car-step-2').style.display='';document.getElementById('add-car-step-dot-2').style.background='var(--brand)';const t=CAR_TYPES[selectedCarType];const b=document.getElementById('selected-car-type-badge');if(b)b.innerHTML=t.icon+' '+t.label;scrollModalTop('addCar');}
+function addCarStep1(){document.getElementById('add-car-step-1').style.display='';document.getElementById('add-car-step-2').style.display='none';const s3=document.getElementById('add-car-step-3');if(s3)s3.style.display='none';document.getElementById('add-car-step-dot-2').style.background='var(--s5)';const d3=document.getElementById('add-car-step-dot-3');if(d3)d3.style.background='var(--s5)';scrollModalTop('addCar');}
 function addCarStep3(){
   const g=id=>document.getElementById(id)?.value?.trim()??'';
   if(!g('car-make')){showToast('⚠️ Enter the car make');return;}
@@ -3245,8 +3247,9 @@ function addCarStep3(){
   const base=CAR_TYPES[selectedCarType]?CAR_TYPES[selectedCarType].items:[];
   _carPendingItems=base.map((t,idx)=>({_id:'cpi_'+idx,icon:t.i||'🔧',label:t.n,type:t.partType||('custom_'+idx),km:t.km||0,days:t.days||365,note:t.note||'',enabled:true,isCustom:false,serviceType:t.t||'I',remarks:t.note||''}));
   renderCarPendingItems();
+  scrollModalTop('addCar');
 }
-function addCarStep2Back(){document.getElementById('add-car-step-3').style.display='none';document.getElementById('add-car-step-2').style.display='';const d3=document.getElementById('add-car-step-dot-3');if(d3)d3.style.background='var(--s5)';}
+function addCarStep2Back(){document.getElementById('add-car-step-3').style.display='none';document.getElementById('add-car-step-2').style.display='';const d3=document.getElementById('add-car-step-dot-3');if(d3)d3.style.background='var(--s5)';scrollModalTop('addCar');}
 
 function renderCarPendingItems(){
   const list=document.getElementById('car-custom-intervals-list'); if(!list) return;
